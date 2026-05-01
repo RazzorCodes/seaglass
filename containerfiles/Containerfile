@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+ARG CACHE_BUST
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY src/ /app/src/
+
+# Set working directory to src so Flask can find templates/static
+WORKDIR /app/src
+
+# Expose port (internal)
+EXPOSE 5000
+
+# Run with gunicorn
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]
