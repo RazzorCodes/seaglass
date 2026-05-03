@@ -1,0 +1,24 @@
+1. Release information:
+  Name: {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+  Chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+  App Version: {{ .Chart.AppVersion }}
+
+2. Get the application URL by running these commands:
+
+{{- if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "seaglass.fullname" . }})
+  export NODE_IP=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  kubectl get svc --namespace {{ .Release.Namespace }} {{ include "seaglass.fullname" . }} -w
+{{- else if .Values.ingress.enabled }}
+  echo "Ingress hosts:"
+{{- range .Values.ingress.hosts }}
+  echo "  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}"
+{{- end }}
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "seaglass.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME {{ .Values.service.port }}:{{ .Values.containerPort }}
+  echo "Visit: http://127.0.0.1:{{ .Values.service.port }}"
+{{- end }}

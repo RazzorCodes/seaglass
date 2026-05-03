@@ -1,0 +1,106 @@
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: zot.lan/homereef-seaglass
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 5000
+  annotations: {}
+
+containerPort: 5000
+
+transflux:
+  url: "http://homereef-transflux.kube-idle.svc.cluster.local:8000"
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: seaglass.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+readinessProbe:
+  enabled: true
+  path: /api/seaglass-version
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 6
+  successThreshold: 1
+
+livenessProbe:
+  enabled: true
+  path: /api/seaglass-version
+  initialDelaySeconds: 20
+  periodSeconds: 30
+  timeoutSeconds: 2
+  failureThreshold: 5
+  successThreshold: 1
+
+startupProbe:
+  enabled: false
+  path: /
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 30
+  successThreshold: 1
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+podAnnotations: {}
+deploymentAnnotations: {}
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 75
+
+env: []
+envFrom: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
