@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rail Nav Mockup v4</title>
+  <style>
+    :root {
+      --bg-base:    #0f172a;
+      --bg-surface: #1e293b;
+      --bg-tabs:    #0a111f;   /* solid so tint overlay is predictable */
+      --text-primary:   #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-primary: #3b82f6;
+      --border:     rgba(255,255,255,0.10);
+      --tabbar-h:   54px;
+      --rail-w:     68px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background-image:
+        radial-gradient(circle at 15% 50%, rgba(59,130,246,0.15) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(16,185,129,0.10) 0%, transparent 50%);
+    }
+
+    .app-shell {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      height: 90vh;
+    }
+
+    /* ── Rail ─────────────────────────────────────────────── */
+    .app-rail {
+      width: var(--rail-w);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: var(--tabbar-h);
+      padding-bottom: 0.75rem;
+      gap: 0.3rem;
+      background: #09111e;
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: 16px 0 0 16px;
+      overflow: visible;
+      position: relative;
+      z-index: 0;
+    }
+
+    .rail-header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: var(--tabbar-h);
+      background: var(--bg-tabs);
+      border-bottom: 1px solid var(--border);
+      border-radius: 16px 0 0 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .rail-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--app-color, transparent);
+      opacity: 0;
+      transition: opacity 0.3s, background 0.3s;
+    }
+    .rail-header.tinted::before { opacity: 0.12; }
+
+    .rail-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      background: none;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      -webkit-tap-highlight-color: transparent;
+
+      position: relative;
+      z-index: 1;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition:
+        background     0.22s ease,
+        width          0.22s ease,
+        border-radius  0.22s ease,
+        box-shadow     0.22s ease,
+        opacity        0.22s ease;
+    }
+
+    .rail-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.22s ease;
+      pointer-events: none;
+    }
+
+    .rail-btn:not(.active):not([data-status="disabled"]):hover .rail-icon { opacity: 1; }
+    .rail-btn:not(.active) .rail-icon { opacity: 0.55; }
+
+    /* No movement; seam is masked by an extended right edge */
+    .rail-btn.active {
+      width: 54px;
+      border-radius: 10px 0 0 10px;
+      z-index: 10;
+      box-shadow: -2px 0 14px rgba(0,0,0,0.5);
+      overflow: visible;
+    }
+    .rail-btn.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -2px;
+      width: 2px;
+      height: 100%;
+      background: #1e293b;
+      border-radius: 0 1px 1px 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .rail-btn.active .rail-icon {
+      opacity: 1;
+      position: relative;
+      z-index: 1;
+    }
+
+    .rail-btn[data-status="disabled"] {
+      pointer-events: none;
+      cursor: not-allowed;
+      background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(255,255,255,0.035) 0px,
+        rgba(255,255,255,0.035) 2px,
+        transparent 2px,
+        transparent 7px
+      );
+      border-radius: 10px;
+    }
+    .rail-btn[data-status="disabled"] .rail-icon {
+      opacity: 1;
+      filter: saturate(0) brightness(0.35);
+    }
+
+    .status-bar {
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 2px;
+      opacity: 0.9;
+    }
+
+    .rail-btn[data-status="online"] .status-bar       { background: #22c55e; }
+    .rail-btn[data-status="degraded"] .status-bar     { background: #eab308; }
+    .rail-btn[data-status="offline"] .status-bar      { background: #ef4444; }
+    .rail-btn[data-status="never"] .status-bar        { background: #6b7280; }
+    .rail-btn[data-status="disabled"] .status-bar     { display: none; }
+
+    .rail-btn::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: calc(100% + 16px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1e293b;
+      color: var(--text-primary);
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s;
+      border: 1px solid var(--border);
+      z-index: 300;
+    }
+    .rail-btn:hover::after { opacity: 1; }
+
+    .rail-spacer { flex: 1; }
+
+    .rail-btn--settings .rail-icon { color: var(--text-secondary) !important; }
+
+    .app-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 0 16px 16px 0;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      position: relative;
+      z-index: 1;
+    }
+
+    .tabs {
+      height: var(--tabbar-h);
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-end;
+      padding: 0 1rem;
+      background: var(--bg-tabs);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tabs::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--app-color, transparent);
+      opacity: 0;
+      transition: opacity 0.3s, background 0.3s;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .tabs.tinted::before { opacity: 0.12; }
+
+    .tab-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      background: none;
+      border: none;
+      outline: none;
+
+      position: relative;
+      z-index: 1;
+      color: var(--text-secondary);
+      padding: 0.75rem 1.4rem;
+      font-size: 0.93rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 10px 10px 0 0;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-right: 0.15rem;
+      top: 0;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+    .tab-btn.active {
+      color: #ffffff;
+      background: color-mix(in srgb, var(--bg-surface) 70%, var(--app-color, #3b82f6) 30%);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-bottom: none;
+      padding-bottom: calc(0.75rem + 2px);
+      box-shadow: 0 -1px 0 rgba(255,255,255,0.08) inset;
+    }
+
+    .badge {
+      background: var(--accent-primary);
+      color: white;
+      font-size: 0.7rem;
+      padding: 1px 7px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .tabs-right {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      padding-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .content-area {
+      flex: 1;
+      background: var(--bg-surface);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      overflow: hidden;
+    }
+
+    .content-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--app-color, transparent);
+      opacity: 0;
+      transition: opacity 0.35s, background 0.35s;
+      pointer-events: none;
+    }
+    .content-area.tinted::before { opacity: 0.07; }
+
+    .content-icon {
+      position: relative;
+      z-index: 1;
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      transition: background 0.3s, border 0.3s;
+    }
+    .content-icon.visible { display: flex; }
+
+    .content-label {
+      position: relative;
+      z-index: 1;
+      font-size: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .content-sublabel {
+      position: relative;
+      z-index: 1;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <nav class="app-rail" id="rail">
+    <div class="rail-header" id="rail-header"></div>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn rail-btn--settings" data-tip="Seaglass Settings">
+      <span class="rail-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06
+                   a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09
+                   A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83
+                   l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09
+                   A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83
+                   l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09
+                   a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83
+                   l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09
+                   a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </span>
+    </button>
+  </nav>
+
+  <div class="app-container">
+    <nav class="tabs" id="tabbar">
+      <button class="tab-btn active" data-tab="library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        Library
+      </button>
+      <button class="tab-btn" data-tab="queue">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        Queue <span class="badge">3</span>
+      </button>
+      <span class="tabs-right">Transflux: v1.4.2</span>
+    </nav>
+
+    <div class="content-area" id="content-area">
+      <div class="content-icon" id="content-icon"></div>
+      <span class="content-label" id="content-label">Seaglass — Library view</span>
+      <span class="content-sublabel" id="content-sublabel"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const APPS = [
+  {
+    id: 'transflux',  label: 'Transflux',  status: 'online',  color: '#06b6d4',
+    icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  },
+  {
+    id: 'brinecrypt', label: 'Brinecrypt', status: 'degraded', color: '#4338ca',
+    icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  },
+  {
+    id: 'oakleaf',    label: 'Oakleaf',    status: 'offline', color: '#22c55e',
+    icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21"/><path d="M9.5 8A5 5 0 0 1 20 7c0 6-5 8-11 11"/></svg>`,
+  },
+  {
+    id: 'ember',      label: 'Ember',      status: 'disabled', color: '#ef4444',
+    icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
+  },
+  {
+    id: 'solaris',    label: 'Solaris',    status: 'never',  color: '#f59e0b',
+    icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`,
+  },
+];
+
+const rail        = document.getElementById('rail');
+const railHeader  = document.getElementById('rail-header');
+const spacer      = rail.querySelector('.rail-spacer');
+const tabbar      = document.getElementById('tabbar');
+const contentArea = document.getElementById('content-area');
+const contentIcon = document.getElementById('content-icon');
+const contentLbl  = document.getElementById('content-label');
+const contentSub  = document.getElementById('content-sublabel');
+let   activeBtn   = null;
+
+function setTint(color) {
+  const targets = [tabbar, contentArea, railHeader];
+  if (color) {
+    targets.forEach(el => {
+      el.style.setProperty('--app-color', color);
+      el.classList.add('tinted');
+    });
+  } else {
+    targets.forEach(el => {
+      el.style.removeProperty('--app-color');
+      el.classList.remove('tinted');
+    });
+  }
+}
+
+function resetContent() {
+  setTint(null);
+  contentLbl.textContent = 'Seaglass — Library view';
+  contentSub.textContent = '';
+  contentIcon.className  = 'content-icon';
+  contentIcon.style.cssText = '';
+  contentIcon.innerHTML  = '';
+}
+
+function activateApp(btn, app) {
+  if (activeBtn) {
+    activeBtn.classList.remove('active');
+    activeBtn.style.background = '';
+    activeBtn.style.color      = '';
+  }
+
+  if (activeBtn === btn) {
+    activeBtn = null;
+    resetContent();
+    return;
+  }
+
+  btn.classList.add('active');
+  activeBtn = btn;
+
+  btn.style.background = '#1e293b';
+  btn.style.color      = app.color;
+
+  setTint(app.color);
+
+  if (app.status === 'offline') {
+    contentLbl.textContent = `${app.label} — disconnected`;
+    contentSub.textContent = 'The endpoint is not responding. Check service health.';
+    contentIcon.style.background = '#ef44441a';
+    contentIcon.style.border     = '1px solid #ef444440';
+    contentIcon.style.color      = '#ef4444';
+    contentIcon.innerHTML        = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+    contentIcon.className        = 'content-icon visible';
+  } else if (app.status === 'degraded') {
+    contentLbl.textContent = `${app.label} — degraded`;
+    contentSub.textContent = 'Service is reachable but performance/errors are outside normal range.';
+    contentIcon.style.background = '#eab3081a';
+    contentIcon.style.border     = '1px solid #eab30844';
+    contentIcon.style.color      = '#eab308';
+    contentIcon.innerHTML        = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    contentIcon.className        = 'content-icon visible';
+  } else if (app.status === 'never') {
+    contentLbl.textContent = `${app.label} — never connected`;
+    contentSub.textContent = 'Service is activated but has not established its first connection yet.';
+    contentIcon.style.background = '#6b72801a';
+    contentIcon.style.border     = '1px solid #6b728044';
+    contentIcon.style.color      = '#6b7280';
+    contentIcon.innerHTML        = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>`;
+    contentIcon.className        = 'content-icon visible';
+  } else {
+    contentLbl.textContent = `${app.label} — content area`;
+    contentSub.textContent = '';
+    contentIcon.style.background = app.color + '1a';
+    contentIcon.style.border     = `1px solid ${app.color}44`;
+    contentIcon.style.color      = app.color;
+    contentIcon.innerHTML        = btn.querySelector('.rail-icon').innerHTML;
+    contentIcon.className        = 'content-icon visible';
+  }
+}
+
+APPS.forEach(app => {
+  const btn = document.createElement('button');
+  btn.dataset.tip    = app.label + (app.status !== 'online' ? ` · ${app.status}` : '');
+  btn.dataset.status = app.status;
+  btn.className      = 'rail-btn';
+  btn.innerHTML = `<span class="status-bar"></span><span class="rail-icon" style="color:${app.color}">${app.icon}</span>`;
+
+  if (app.status !== 'disabled') {
+    btn.addEventListener('click', () => activateApp(btn, app));
+  }
+
+  rail.insertBefore(btn, spacer);
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
