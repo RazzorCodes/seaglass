@@ -25,6 +25,19 @@ window.SeaglassRail = (function () {
         window.SeaglassContent.setServiceContent(app);
     }
 
+    async function refreshHealthForButton(btn, app) {
+        const result = await window.SeaglassAPI.getHealth(app.id);
+        const nextStatus = result && result.status ? result.status : app.status;
+
+        if (nextStatus === "mock") {
+            return;
+        }
+
+        app.status = nextStatus;
+        btn.dataset.status = nextStatus;
+        btn.dataset.tip = app.label + (nextStatus !== "online" ? ` · ${nextStatus}` : "");
+    }
+
     function renderRail(apps) {
         const { rail, spacer } = window.SeaglassDOM;
 
@@ -40,6 +53,9 @@ window.SeaglassRail = (function () {
             }
 
             rail.insertBefore(btn, spacer);
+
+            refreshHealthForButton(btn, app);
+            setInterval(() => refreshHealthForButton(btn, app), 10000);
         });
     }
 

@@ -8,7 +8,7 @@ CHART     := helm
 VERSION_FILE := src/version.txt
 VERSION      := $(shell cat $(VERSION_FILE) | tr -d '[:space:]')
 
-.PHONY: build push deploy helm-upgrade lint local
+.PHONY: build push deploy helm-upgrade lint local local-dev local-stop
 
 build:
 	@MANIFEST=$(IMAGE)-manifest:$(VERSION); \
@@ -46,3 +46,9 @@ lint:
 
 local:
 	podman-compose -f containerfiles/local-test-seaglass.yml up --build
+
+local-dev:
+	podman-compose -f containerfiles/local-dev-seaglass.yml up --build
+
+local-stop:
+	podman-compose -f containerfiles/local-dev-seaglass.yml down
