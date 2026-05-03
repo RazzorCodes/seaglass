@@ -28,8 +28,16 @@ body {
     align-items: center;
     padding: 2rem;
     background-image:
-        radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+        radial-gradient(
+            circle at 15% 50%,
+            rgba(59, 130, 246, 0.15) 0%,
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 85% 30%,
+            rgba(16, 185, 129, 0.1) 0%,
+            transparent 50%
+        );
 }
 
 .app-shell {
@@ -76,7 +84,9 @@ body {
     inset: 0;
     background: var(--app-color, transparent);
     opacity: 0;
-    transition: opacity 0.3s, background 0.3s;
+    transition:
+        opacity 0.3s,
+        background 0.3s;
 }
 
 .rail-header.tinted::before {
@@ -122,11 +132,13 @@ body {
 
 .rail-btn:not(.active):not([data-status="disabled"]):hover .status-bar {
     width: 3px;
+    left: -3px;
 }
 
 .rail-btn:not(.active) .status-bar {
     width: 1px;
     opacity: 0.55;
+    left: -3px;
 }
 
 .rail-btn.active {
@@ -176,7 +188,7 @@ body {
 
 .status-bar {
     position: absolute;
-    left: 0;
+    left: 3px;
     top: 6px;
     bottom: 6px;
     width: 3px;
@@ -265,7 +277,9 @@ body {
     inset: 0;
     background: var(--app-color, transparent);
     opacity: 0;
-    transition: opacity 0.3s, background 0.3s;
+    transition:
+        opacity 0.3s,
+        background 0.3s;
     pointer-events: none;
     z-index: 0;
 }
@@ -303,7 +317,11 @@ body {
 
 .tab-btn.active {
     color: #ffffff;
-    background: color-mix(in srgb, var(--bg-surface) 70%, var(--app-color, #3b82f6) 30%);
+    background: color-mix(
+        in srgb,
+        var(--bg-surface) 70%,
+        var(--app-color, #3b82f6) 30%
+    );
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-bottom: none;
     padding-bottom: calc(0.75rem + 3px);
@@ -346,7 +364,9 @@ body {
     inset: 0;
     background: var(--app-color, transparent);
     opacity: 0;
-    transition: opacity 0.35s, background 0.35s;
+    transition:
+        opacity 0.35s,
+        background 0.35s;
     pointer-events: none;
 }
 
@@ -364,7 +384,9 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-    transition: background 0.3s, border 0.3s;
+    transition:
+        background 0.3s,
+        border 0.3s;
 }
 
 .content-icon.visible {
@@ -384,4 +406,251 @@ body {
     font-size: 0.82rem;
     color: var(--text-secondary);
     opacity: 0.6;
+}
+
+/* ── Tab pane ─────────────────────────────────────────────────────────────── */
+
+.tab-pane {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-surface);
+    z-index: 1;
+}
+
+.tab-pane[hidden] {
+    display: none;
+}
+
+/* ── Pane toolbar ─────────────────────────────────────────────────────────── */
+
+.pane-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.pane-search {
+    flex: 1;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    padding: 0.38rem 0.75rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.pane-search:focus {
+    border-color: var(--accent-primary);
+}
+
+/* ── Data table ───────────────────────────────────────────────────────────── */
+
+.pane-table {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.data-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-tabs);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.55rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.data-table thead th.col-check { cursor: default; width: 40px; }
+.data-table thead th:not(.col-check):hover { color: var(--text-primary); }
+.data-table thead th.sort-active { color: var(--text-primary); }
+
+.data-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.1s;
+}
+
+.data-table tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+
+.data-table td {
+    padding: 0.55rem 1rem;
+    vertical-align: middle;
+}
+
+.data-table td.col-check  { width: 40px; }
+.data-table td.col-file   { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.data-table td.col-size   { white-space: nowrap; color: var(--text-secondary); }
+.data-table td.col-meta   { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; }
+
+/* ── Status badges ────────────────────────────────────────────────────────── */
+
+.status-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.status-badge.done     { background: rgba(34,  197, 94,  0.15); color: #22c55e; }
+.status-badge.pending  { background: rgba(234, 179, 8,   0.15); color: #eab308; }
+.status-badge.error    { background: rgba(239, 68,  68,  0.15); color: #ef4444; }
+.status-badge.running  { background: rgba(59,  130, 246, 0.15); color: #3b82f6; }
+.status-badge.skipped  { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+
+/* ── Batch action bar ─────────────────────────────────────────────────────── */
+
+.batch-bar {
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-base) 70%, var(--accent-primary) 30%);
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.batch-bar.visible { display: flex; }
+
+.batch-count { color: var(--text-secondary); }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.btn {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 0.38rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+
+.btn:hover   { opacity: 0.82; }
+.btn:active  { opacity: 0.65; }
+
+.btn-primary { background: var(--accent-primary); color: #fff; }
+
+.btn-danger  {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.28);
+}
+
+.btn-ghost   {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+/* ── Empty / error states ─────────────────────────────────────────────────── */
+
+.pane-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.pane-empty h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.pane-empty p { font-size: 0.875rem; }
+
+/* ── Queue ────────────────────────────────────────────────────────────────── */
+
+.queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.queue-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.queue-item-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-meta {
+    font-size: 0.775rem;
+    color: var(--text-secondary);
+}
+
+.queue-progress {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.queue-progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
+
+.queue-progress-fill--indeterminate {
+    width: 40% !important;
+    animation: indeterminate 1.6s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
 }

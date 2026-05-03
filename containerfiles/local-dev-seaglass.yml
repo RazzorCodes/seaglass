@@ -10,15 +10,14 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - TRANSFLUX_URL=http://api.transcode.homereef.lan
+      - TRANSFLUX_URL=http://api.transcode.spacesaver.lan
       - BRINECRYPT_URL=http://brinecrypt.lan
     dns:
       - 192.168.0.127
-    extra_hosts:
-      - "api.transcode.homereef.lan:host-gateway"
     volumes:
       - ../src:/app/src:Z
       - ../requirements.txt:/app/requirements.txt:Z
     working_dir: /app/src
-    command: ["gunicorn", "--reload", "-w", "1", "-b", "0.0.0.0:5000", "app:app"]
+    command:
+      ["gunicorn", "--reload", "-w", "1", "-b", "0.0.0.0:5000", "app:app"]
     restart: unless-stopped

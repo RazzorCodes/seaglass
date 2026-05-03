@@ -1,0 +1,87 @@
+{% macro sort_th(label, col, current_sort, current_dir) %}
+<th data-sort="{{ col }}" class="{{ 'sort-active' if current_sort == col else '' }}">
+    {{ label }}{% if current_sort == col %} {{ "↑" if current_dir == "asc" else "↓" }}{% endif %}
+</th>
+{% endmacro %}
+
+{% if error %}
+
+<div class="pane-empty">
+    <h3>Transflux Unreachable</h3>
+    <p>{{ error }}</p>
+    <button class="btn btn-ghost"
+        data-action="retry">Retry</button>
+</div>
+
+{% elif items is not none and items | length == 0 %}
+
+<div class="pane-empty">
+    <h3>Library Empty</h3>
+    <p>Scan your configured media directory to populate the library.</p>
+    <button class="btn btn-primary"
+        data-action="scan"
+        data-url="/api/transflux/scan"
+        data-method="PUT">Scan Directory</button>
+</div>
+
+{% else %}
+
+{% set current_sort = args.get("sort", "") %}
+{% set current_dir  = args.get("dir",  "asc") %}
+
+<div class="pane-toolbar">
+    <input class="pane-search"
+        type="search"
+        placeholder="Filter…"
+        data-filter="q"
+        value="{{ args.get('q', '') }}"
+        autocomplete="off">
+    <button class="btn btn-ghost"
+        data-action="scan"
+        data-url="/api/transflux/scan"
+        data-method="PUT">Scan</button>
+</div>
+
+<div class="pane-table" data-library-form>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th class="col-check"><input type="checkbox" id="check-all"></th>
+                {{ sort_th("File",   "name",   current_sort, current_dir) }}
+                {{ sort_th("Status", "status", current_sort, current_dir) }}
+                {{ sort_th("Size",   "size",   current_sort, current_dir) }}
+                <th>Info</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            {% set status = (item.status or "") | lower %}
+            {% set queueable = item.hash and status in ("pending", "error") %}
+            <tr>
+                <td class="col-check">
+                    {% if queueable %}
+                    <input type="checkbox" class="row-check" name="hash" value="{{ item.hash }}">
+                    {% endif %}
+                </td>
+                <td class="col-file" title="{{ item.path or '' }}">
+                    {{ item.name or (item.path or "").split("/") | last or "Unknown" }}
+                </td>
+                <td><span class="status-badge {{ status }}">{{ status | upper }}</span></td>
+                <td class="col-size">{{ item._size }}</td>
+                <td class="col-meta">{{ item._duration }} · {{ item._mbs }} · {{ item._quality }} · {{ item._codec }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="batch-bar" id="batch-bar">
+    <span class="batch-count" id="batch-count">0 selected</span>
+    <button class="btn btn-primary"
+        data-action="process-batch"
+        data-url="/api/transflux/process-batch"
+        data-method="PUT">Process Selected</button>
+    <button class="btn btn-ghost" data-action="batch-clear">Clear</button>
+</div>
+
+{% endif %}

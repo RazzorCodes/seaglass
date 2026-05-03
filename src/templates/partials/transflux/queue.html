@@ -1,0 +1,49 @@
+{% if tasks %}
+
+<div class="queue-list">
+    {% for task in tasks %}
+    {% set pct = "%.1f" | format((task.progress.percent | float) if task.progress else 0) %}
+    <div class="queue-item">
+        <div class="queue-item-info">
+            <div class="queue-item-title">
+                {{ task.name or ("Task: " + task.uuid[:8]) }}
+            </div>
+            <div class="queue-item-meta">
+                {% if task.type == "tran" %}
+                    Transcode · {{ task.uuid[:8] }} · {{ (task.quality_preset or "high") | lower }} · {{ pct }}%
+                {% elif task.type == "scan" %}
+                    Library Scan · scanning…
+                {% else %}
+                    {{ task.type }}
+                {% endif %}
+            </div>
+            <div class="queue-progress">
+                {% if task.type == "tran" %}
+                <div class="queue-progress-fill" style="width: {{ pct }}%"></div>
+                {% elif task.type == "scan" %}
+                <div class="queue-progress-fill queue-progress-fill--indeterminate"></div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="queue-item-actions">
+            <button class="btn btn-danger"
+                data-action="cancel"
+                data-url="/api/transflux/cancel/{{ task.uuid }}"
+                data-method="DELETE"
+                {% if task.type == "tran" and task.progress and task.progress.percent | float > 0.5 %}
+                data-confirm="Cancel this task? It is actively processing."
+                {% endif %}
+                title="Cancel">✕</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+
+<div class="pane-empty">
+    <h3>No Active Tasks</h3>
+    <p>Select items from the Library tab to start transcoding.</p>
+</div>
+
+{% endif %}
