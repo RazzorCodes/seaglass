@@ -1,0 +1,50 @@
+{% if tasks %}
+<span id="queue-badge" class="badge" hx-swap-oob="innerHTML">{{ tasks | length }}</span>
+<div class="queue-list">
+    {% for task in tasks %}
+    <div class="queue-item">
+        <div class="queue-item-info">
+            <div class="queue-item-title">{{ task.name or ('Task: ' + task.uuid[:8]) }}</div>
+            <div class="queue-item-details">
+                {% if task.type == 'tran' %}
+                    {% set pct = "%.1f"|format((task.progress.percent | float) if task.progress else 0) %}
+                    Transcode | {{ task.uuid[:8] }} | {{ (task.quality_preset or 'high') | lower }} | {{ pct }}%
+                {% elif task.type == 'scan' %}
+                    Library Scan | Scanning library...
+                {% else %}
+                    {{ task.type }}
+                {% endif %}
+            </div>
+            {% if task.type == 'tran' %}
+            {% set pct = "%.1f"|format((task.progress.percent | float) if task.progress else 0) %}
+            <div class="queue-progress">
+                <div class="queue-progress-bar" style="width: {{ pct }}%"></div>
+            </div>
+            {% elif task.type == 'scan' %}
+            <div class="queue-progress">
+                <div class="queue-progress-bar" style="width: 100%; animation: pulse 2s infinite;"></div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="queue-item-actions">
+            <button class="btn btn-icon btn-danger btn-cancel"
+                hx-delete="/api/cancel/{{ task.uuid }}"
+                hx-swap="none"
+                {% if task.type == 'tran' and task.progress and task.progress.percent | float > 0.5 %}
+                hx-confirm="Are you sure you want to cancel this task? It is actively processing."
+                {% endif %}
+                title="Cancel Task">
+                <i class='bx bx-x'></i>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<span id="queue-badge" class="badge" hx-swap-oob="innerHTML">0</span>
+<div class="empty-state">
+    <div class="empty-icon"><i class='bx bx-check-circle'></i></div>
+    <h2>No Active Tasks</h2>
+    <p>Select items from the Library to start transcoding.</p>
+</div>
+{% endif %}

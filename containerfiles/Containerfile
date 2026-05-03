@@ -3,18 +3,18 @@ FROM python:3.12-slim
 WORKDIR /app
 ARG CACHE_BUST
 
+# RUN groupadd -g 10001 app && useradd -u 10001 -g 10001 -M -s /sbin/nologin app
+
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
+# Copy application files and set ownership
 COPY src/ /app/src/
+# RUN chown -R 10001:10001 /app
 
-# Set working directory to src so Flask can find templates/static
 WORKDIR /app/src
+# USER 10001
 
-# Expose port (internal)
 EXPOSE 5000
-
-# Run with gunicorn
 CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]

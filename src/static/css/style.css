@@ -989,3 +989,14 @@ input[type="number"] {
     font-weight: 600;
     margin-left: 4px;
 }
+
+/* Filter input visibility — driven by data attributes set by JS */
+#library-form:not([data-filter-type="name"])   #filter-value-name           { display: none; }
+#library-form:not([data-filter-type="status"]) #filter-value-status         { display: none; }
+#library-form:not([data-filter-type="info"])   #filter-value-info-container { display: none; }
+
+#library-form:not([data-info-kind="codec"])    #info-val-codec  { display: none; }
+#library-form:not([data-info-kind="quality"])  #info-val-quality { display: none; }
+#library-form:not([data-info-kind="ar"])       #info-val-ar     { display: none; }
+#library-form:not([data-info-kind="duration"]):not([data-info-kind="mb_s"]) #compare-op  { display: none; }
+#library-form:not([data-info-kind="duration"]):not([data-info-kind="mb_s"]) #compare-val { display: none; }

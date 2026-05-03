@@ -18,7 +18,10 @@ service:
 containerPort: 5000
 
 transflux:
-  url: "http://homereef-transflux.kube-idle.svc.cluster.local:8000"
+  url: ""
+
+brinecrypt:
+  url: ""
 
 ingress:
   enabled: true
@@ -65,20 +68,9 @@ startupProbe:
   failureThreshold: 30
   successThreshold: 1
 
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 10001
-  runAsGroup: 10001
-  fsGroup: 10001
-  seccompProfile:
-    type: RuntimeDefault
+podSecurityContext: {}
 
-securityContext:
-  allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: false
-  capabilities:
-    drop:
-      - ALL
+securityContext: {}
 
 podAnnotations: {}
 deploymentAnnotations: {}

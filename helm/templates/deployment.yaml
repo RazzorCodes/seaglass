@@ -44,7 +44,9 @@ spec:
               protocol: TCP
           env:
             - name: TRANSFLUX_URL
-              value: {{ .Values.transflux.url | quote }}
+              value: {{ required "transflux.url is required" .Values.transflux.url | quote }}
+            - name: BRINECRYPT_URL
+              value: {{ required "brinecrypt.url is required" .Values.brinecrypt.url | quote }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

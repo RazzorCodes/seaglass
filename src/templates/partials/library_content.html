@@ -1,0 +1,58 @@
+{% if error %}
+<div class="empty-state">
+    <div class="empty-icon empty-icon--error"><i class='bx bx-wifi-off'></i></div>
+    <h2>Transflux Unreachable</h2>
+    <p>{{ error }}</p>
+    <button class="btn btn-lrg btn-primary"
+        hx-get="/partial/list"
+        hx-include="#library-form"
+        hx-target="#library-content"
+        hx-swap="innerHTML">
+        <i class='bx bx-refresh'></i> Retry
+    </button>
+</div>
+{% elif items is not none and items | length == 0 %}
+<div class="empty-state">
+    <div class="empty-icon"><i class='bx bx-folder-open'></i></div>
+    <h2>Library is Empty</h2>
+    <p>Scan your configured media directory to find items.</p>
+    <button class="btn btn-lrg btn-primary" hx-put="/api/scan" hx-swap="none">
+        <i class='bx bx-radar'></i> SCAN DIRECTORY
+    </button>
+</div>
+{% else %}
+<table class="data-table" id="library-table">
+    <thead>
+        <tr>
+            <th class="col-check"><input type="checkbox" id="check-all"></th>
+            <th class="col-file" id="th-file" data-sort="file">Filename</th>
+            <th class="col-status" id="th-status" data-sort="status">Status</th>
+            <th class="col-info" id="th-info" data-sort="info">Metadata</th>
+        </tr>
+    </thead>
+    <tbody id="library-body">
+        {% for item in items %}
+        {% set status = (item.status or '') | lower %}
+        {% set can_transcode = item.hash and status in ('pending', 'error') %}
+        <tr>
+            <td class="col-check">
+                {% if can_transcode %}
+                <input type="checkbox" class="row-checkbox" name="hash" value="{{ item.hash }}">
+                {% endif %}
+            </td>
+            <td class="col-file" title="{{ item.path or '' }}">
+                <div class="file-name-text">
+                    {{ item.name or (item.path or '').split('/') | last or 'Unknown' }}
+                </div>
+            </td>
+            <td class="col-status">
+                <span class="status-badge {{ status }}">{{ status | upper }}</span>
+            </td>
+            <td class="col-info">
+                {{ item._size_str }} | {{ item._duration_str }} | {{ item._mbs_str }} | {{ item._quality_str }} | {{ item._codec_str }} | {{ item._res_str }} | AR: {{ item._ar_str }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}

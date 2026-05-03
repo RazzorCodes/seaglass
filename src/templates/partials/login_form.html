@@ -1,0 +1,6 @@
+<form hx-post="/api/login" hx-target="#login-widget" hx-swap="innerHTML" style="display:contents">
+    <input type="text" name="user" placeholder="User" class="login-input">
+    <input type="password" name="pass" placeholder="Pass" class="login-input">
+    <button type="submit" class="btn btn-primary login-btn">Login</button>
+    {% if error %}<span class="login-error">{{ error }}</span>{% endif %}
+</form>

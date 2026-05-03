@@ -5,11 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seaglass Control</title>
-    <!-- Modern Typography -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inter.css') }}">
-    <!-- Boxicons for icons -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/boxicons.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -24,8 +23,16 @@
                     <i class='bx bx-list-ol'></i> Queue
                     <span id="queue-badge" class="badge">0</span>
                 </button>
+
+                <div class="login-widget" id="login-widget">
+                    <input type="text" id="login-user" placeholder="User" class="login-input">
+                    <input type="password" id="login-pass" placeholder="Pass" class="login-input">
+                    <button id="btn-login" class="btn btn-primary login-btn">Login</button>
+                    <span id="login-error" class="login-error hidden"></span>
+                </div>
+
                 <div class="version-tag">
-                    Transflux: <span id="app-version">v---</span>
+                    Transflux: <span hx-get="/api/version-text" hx-trigger="load" hx-swap="innerHTML">v---</span>
                 </div>
             </nav>
 
@@ -34,8 +41,11 @@
                 <section id="library" class="tab-pane active">
                     <div class="toolbar">
                         <div class="toolbar-actions">
-                            <button id="btn-transcode-selected" class="btn btn-primary" disabled>
-                                <i class='bx bx-play-circle'></i> Transcode Selected
+                            <button id="btn-transcode-selected" class="btn btn-primary" disabled
+                                hx-put="/api/process-batch"
+                                hx-include=".row-checkbox"
+                                hx-swap="none">
+                                <i class='bx bx-play-circle'></i> Transcode Selected (0)
                             </button>
                             <div class="quality-selector">
                                 <label for="quality-preset">Quality:</label>
@@ -51,115 +61,97 @@
                             <label class="toggle-label" for="toggle-auto-refresh-lib">
                                 <span class="toggle-text">Auto-update</span>
                                 <div class="toggle-switch">
-                                    <input type="checkbox" id="toggle-auto-refresh-lib" checked>
+                                    <input type="checkbox" id="toggle-auto-refresh-lib" checked
+                                        hx-on:change="var el=document.getElementById('library-content');el.setAttribute('hx-trigger',this.checked?'load, every 10s, filterChange from:body':'load, filterChange from:body');htmx.process(el)">
                                     <span class="slider"></span>
                                 </div>
                             </label>
-                            <button id="btn-refresh-lib" class="btn btn-icon" title="Refresh List">
+                            <button id="btn-refresh-lib" class="btn btn-icon" title="Refresh List"
+                                hx-on:click="htmx.trigger(document.body,'filterChange')">
                                 <i class='bx bx-refresh'></i>
                             </button>
-                            <button id="btn-scan-lib" class="btn btn-icon" title="Rescan Database">
+                            <button id="btn-scan-lib" class="btn btn-icon" title="Rescan Database"
+                                hx-put="/api/scan"
+                                hx-swap="none">
                                 <i class='bx bx-radar'></i>
                             </button>
                         </div>
                     </div>
 
+                    <!-- Filter bar — all inputs inside #library-form so hx-include serializes them -->
                     <div class="filter-section">
-                        <div class="filter-bar">
-                            <div class="filter-group">
-                                <select id="filter-type" class="select-input">
-                                    <option value="name">Name</option>
-                                    <option value="status">Status</option>
-                                    <option value="info">Metadata</option>
-                                </select>
-                            </div>
-                            <div class="filter-group" id="filter-value-container">
-                                <input type="text" id="filter-value-name" class="select-input"
-                                    placeholder="Name contains...">
-                                <select id="filter-value-status" class="select-input hidden">
-                                    <option value="PENDING">Pending</option>
-                                    <option value="PROCESSING">Processing</option>
-                                    <option value="DONE">Done</option>
-                                    <option value="ABORTED">Aborted</option>
-                                    <option value="ERROR">Error</option>
-                                    <option value="UNSUPPORTED">Unsupported</option>
-                                </select>
-                                <div id="filter-value-info-container" class="compare-inputs hidden">
-                                    <select id="info-kind" class="select-input-sm" style="flex: 1;">
-                                        <option value="codec">Codec</option>
-                                        <option value="quality">Quality</option>
-                                        <option value="ar">Aspect Ratio</option>
-                                        <option value="mb_s">Mb/s</option>
-                                        <option value="duration">Duration (mins)</option>
-                                    </select>
+                        <form id="library-form" data-filter-type="name" data-info-kind="codec">
+                            <!-- Sort state updated by JS on header click -->
+                            <input type="hidden" name="sort_col" value="">
+                            <input type="hidden" name="sort_dir" value="asc">
+                            <input type="hidden" name="sort_meta" value="">
 
-                                    <!-- Dynamic Secondary Inputs -->
-                                    <select id="info-val-codec" class="select-input-sm" style="flex: 1;">
-                                        <option value="h264">H.264</option>
-                                        <option value="hevc">HEVC / H.265</option>
+                            <div class="filter-bar">
+                                <div class="filter-group">
+                                    <select id="filter-type" class="select-input">
+                                        <option value="name">Name</option>
+                                        <option value="status">Status</option>
+                                        <option value="info">Metadata</option>
                                     </select>
-
-                                    <select id="info-val-quality" class="select-input-sm hidden" style="flex: 1;">
-                                        <option value="1080p">1080p</option>
-                                        <option value="720p">720p</option>
-                                        <option value="4k">4K</option>
-                                    </select>
-
-                                    <input type="text" id="info-val-ar" class="select-input-sm hidden"
-                                        style="width: 80px;" placeholder="e.g. 16:9">
-
-                                    <select id="compare-op" class="select-input-sm hidden">
-                                        <option value=">=">&ge;</option>
-                                        <option value="<=">&le;</option>
-                                    </select>
-                                    <input type="number" id="compare-val" class="select-input-sm hidden"
-                                        style="width: 80px;" min="0" placeholder="0">
                                 </div>
+                                <div class="filter-group" id="filter-value-container">
+                                    <input type="text" id="filter-value-name" class="select-input"
+                                        placeholder="Name contains..."
+                                        hx-get="/partial/list"
+                                        hx-trigger="keyup changed delay:300ms"
+                                        hx-include="#library-form"
+                                        hx-target="#library-content"
+                                        hx-swap="innerHTML">
+                                    <select id="filter-value-status" class="select-input">
+                                        <option value="pending">Pending</option>
+                                        <option value="processing">Processing</option>
+                                        <option value="done">Done</option>
+                                        <option value="aborted">Aborted</option>
+                                        <option value="error">Error</option>
+                                        <option value="unsupported">Unsupported</option>
+                                    </select>
+                                    <div id="filter-value-info-container" class="compare-inputs">
+                                        <select id="info-kind" class="select-input-sm" style="flex:1">
+                                            <option value="codec">Codec</option>
+                                            <option value="quality">Quality</option>
+                                            <option value="ar">Aspect Ratio</option>
+                                            <option value="mb_s">Mb/s</option>
+                                            <option value="duration">Duration (mins)</option>
+                                        </select>
+                                        <select id="info-val-codec" class="select-input-sm" style="flex:1">
+                                            <option value="h264">H.264</option>
+                                            <option value="hevc">HEVC / H.265</option>
+                                        </select>
+                                        <select id="info-val-quality" class="select-input-sm" style="flex:1">
+                                            <option value="1080p">1080p</option>
+                                            <option value="720p">720p</option>
+                                            <option value="4k">4K</option>
+                                        </select>
+                                        <input type="text" id="info-val-ar" class="select-input-sm"
+                                            style="width:80px" placeholder="e.g. 16:9">
+                                        <select id="compare-op" class="select-input-sm">
+                                            <option value=">=">&ge;</option>
+                                            <option value="<=">&le;</option>
+                                        </select>
+                                        <input type="number" id="compare-val" class="select-input-sm"
+                                            style="width:80px" min="0" placeholder="0">
+                                    </div>
+                                </div>
+                                <button id="btn-add-filter" type="button" class="btn btn-primary">
+                                    <i class='bx bx-filter-alt'></i> Add Filter
+                                </button>
                             </div>
-                            <button id="btn-add-filter" class="btn btn-primary">
-                                <i class='bx bx-filter-alt'></i> Add Filter
-                            </button>
-                        </div>
-                        <div id="active-filters" class="active-filters-container">
-                            <!-- Active filter tags injected here -->
-                        </div>
+                            <div id="active-filters" class="active-filters-container"></div>
+                        </form>
                     </div>
 
                     <div class="list-container">
-                        <!-- Shown when transflux is unreachable -->
-                        <div id="error-state" class="empty-state hidden">
-                            <div class="empty-icon empty-icon--error"><i class='bx bx-wifi-off'></i></div>
-                            <h2>Transflux Unreachable</h2>
-                            <p id="error-state-msg">Could not connect to the backend service.</p>
-                            <button id="btn-retry" class="btn btn-lrg btn-primary">
-                                <i class='bx bx-refresh'></i> Retry
-                            </button>
+                        <div id="library-content"
+                            hx-get="/partial/list"
+                            hx-trigger="load, every 10s, filterChange from:body"
+                            hx-include="#library-form"
+                            hx-swap="innerHTML">
                         </div>
-
-                        <!-- Shown when empty -->
-                        <div id="empty-state" class="empty-state hidden">
-                            <div class="empty-icon"><i class='bx bx-folder-open'></i></div>
-                            <h2>Library is Empty</h2>
-                            <p>Scan your configured media directory to find items.</p>
-                            <button id="btn-scan-large" class="btn btn-lrg btn-primary">
-                                <i class='bx bx-radar'></i> SCAN DIRECTORY
-                            </button>
-                        </div>
-
-                        <!-- Shown when there are items -->
-                        <table class="data-table" id="library-table">
-                            <thead>
-                                <tr>
-                                    <th class="col-check"><input type="checkbox" id="check-all"></th>
-                                    <th class="col-file" id="th-file">Filename</th>
-                                    <th class="col-status" id="th-status">Status</th>
-                                    <th class="col-info" id="th-info">Metadata</th>
-                                </tr>
-                            </thead>
-                            <tbody id="library-body">
-                                <!-- Rows injected via JS -->
-                            </tbody>
-                        </table>
                     </div>
                 </section>
 
@@ -171,31 +163,29 @@
                             <label class="toggle-label" for="toggle-auto-refresh">
                                 <span class="toggle-text">Auto-update</span>
                                 <div class="toggle-switch">
-                                    <input type="checkbox" id="toggle-auto-refresh" checked>
+                                    <input type="checkbox" id="toggle-auto-refresh" checked
+                                        hx-on:change="var el=document.getElementById('queue-content');el.setAttribute('hx-trigger',this.checked?'load, every 3s, queueRefresh from:body':'load, queueRefresh from:body');htmx.process(el)">
                                     <span class="slider"></span>
                                 </div>
                             </label>
-                            <button id="btn-refresh-queue" class="btn btn-icon" title="Refresh Now">
+                            <button id="btn-refresh-queue" class="btn btn-icon" title="Refresh Now"
+                                hx-on:click="htmx.trigger(document.body,'queueRefresh')">
                                 <i class='bx bx-refresh'></i>
                             </button>
                         </div>
                     </div>
 
                     <div class="list-container">
-                        <div id="queue-empty" class="empty-state hidden">
-                            <div class="empty-icon"><i class='bx bx-check-circle'></i></div>
-                            <h2>No Active Tasks</h2>
-                            <p>Select items from the Library to start transcoding.</p>
-                        </div>
-
-                        <div class="queue-list" id="queue-list">
-                            <!-- Queue items injected here -->
+                        <div id="queue-content"
+                            hx-get="/partial/status"
+                            hx-trigger="load, every 3s, queueRefresh from:body"
+                            hx-swap="innerHTML">
                         </div>
                     </div>
                 </section>
             </main>
         </div>
-        <div class="app-footer-version">Seaglass <span id="seaglass-version">v...</span></div>
+        <div class="app-footer-version">Seaglass <span>{{ seaglass_version }}</span></div>
     </div>
 
     <!-- Custom Quality Modal -->
@@ -216,7 +206,7 @@
                         <div class="form-group">
                             <label for="q-preset">FFmpeg Preset</label>
                             <p class="field-desc">Balance speed vs efficiency.</p>
-                            <select id="q-preset" name="preset">
+                            <select id="q-preset" name="ffmpeg_preset">
                                 <option value="ultrafast">Ultrafast</option>
                                 <option value="superfast">Superfast</option>
                                 <option value="veryfast">Veryfast</option>
@@ -245,7 +235,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger-outline modal-close-btn">Cancel</button>
-                <button type="button" id="btn-save-quality" class="btn btn-primary">
+                <button type="button" id="btn-save-quality" class="btn btn-primary"
+                    hx-post="/api/quality"
+                    hx-include="#custom-quality-form"
+                    hx-swap="none">
                     <i class='bx bx-save'></i> Save Settings
                 </button>
             </div>
