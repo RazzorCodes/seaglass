@@ -215,10 +215,13 @@ window.SeaglassTabs = (function () {
             if (r.ok) {
                 window.SeaglassDOM.tabToolbar.innerHTML = await r.text();
                 _initFilterBuilder();
-                // Inject login widget for brinecrypt service
-                _injectLoginWidget();
             }
-        } catch (_) {}
+            // Always inject login widget for brinecrypt, even if toolbar fetch failed
+            _injectLoginWidget();
+        } catch (_) {
+            // Even on network error, try to show login widget
+            _injectLoginWidget();
+        }
     }
 
     function _setSpinner(active) {
@@ -232,7 +235,7 @@ window.SeaglassTabs = (function () {
         const params = new URLSearchParams();
         const all = { ..._currentParams, ..._filtersToParams() };
         for (const [k, v] of Object.entries(all)) {
-            if (Array.isArray(v)) v.forEach((val) => params.append(k, val));
+            if (Array.isArray(v)) v.forEach((val) => params.append(k, v));
             else params.append(k, v);
         }
         const qs = params.toString();
@@ -240,10 +243,16 @@ window.SeaglassTabs = (function () {
         _setSpinner(true);
         try {
             const r = await fetch(url);
-            if (!r.ok) return;
+            if (!r.ok) {
+                // Show a friendly message instead of blank results
+                window.SeaglassDOM.tabResults.innerHTML = `<div style="padding:2rem;text-align:center;color:#94a3b8;">Service returned status ${r.status}. Try logging in above.</div>`;
+                return;
+            }
             window.SeaglassDOM.tabResults.innerHTML = await r.text();
             _afterResultsInject();
-        } catch (_) {}
+        } catch (_) {
+            window.SeaglassDOM.tabResults.innerHTML = `<div style="padding:2rem;text-align:center;color:#94a3b8;">Could not reach the service.</div>`;
+        }
         finally { _setSpinner(false); }
     }
 
@@ -386,7 +395,8 @@ window.SeaglassTabs = (function () {
         window.SeaglassDOM.tabToolbar.innerHTML = "";
         window.SeaglassDOM.tabResults.innerHTML = "";
 
-        if (!tab.url || app.status !== "online") {
+        // Allow degraded services to show tabs (for login widget)
+        if (!tab.url || (app.status !== "online" && app.status !== "degraded")) {
             window.SeaglassContent.showState();
             return;
         }
