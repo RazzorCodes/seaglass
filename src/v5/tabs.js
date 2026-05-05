@@ -31,6 +31,11 @@ window.SeaglassTabs = (function () {
         return out;
     }
 
+    function _clearLoginState() {
+        // No persistent state to clear — login is session-only via cookies
+        // This ensures the widget is recreated fresh on each tab switch
+    }
+
     function _renderFilterTags() {
         const el = window.SeaglassDOM.tabToolbar.querySelector("#filter-tags");
         if (!el) return;
@@ -141,6 +146,67 @@ window.SeaglassTabs = (function () {
         });
     }
 
+    // ── Login widget injection ─────────────────────────────────────────────────
+
+    function _injectLoginWidget() {
+        const toolbar = window.SeaglassDOM.tabToolbar;
+        const state = window.SeaglassState;
+
+        // Only show for brinecrypt service
+        if (!state.activeApp || state.activeApp.id !== 'brinecrypt') return;
+
+        // Don't inject if already present
+        if (toolbar.querySelector('#brinecrypt-login-widget')) return;
+
+        const widget = document.createElement('div');
+        widget.id = 'brinecrypt-login-widget';
+        widget.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1e293b;border-radius:6px;margin-bottom:8px;';
+        widget.innerHTML = `
+            <input type="text" id="bc-user" placeholder="Username" style="padding:4px 8px;border:1px solid #334155;border-radius:4px;background:#0f172a;color:#e2e8f0;font-size:13px;width:140px;">
+            <input type="password" id="bc-pass" placeholder="Password" style="padding:4px 8px;border:1px solid #334155;border-radius:4px;background:#0f172a;color:#e2e8f0;font-size:13px;width:140px;">
+            <button id="bc-login-btn" style="padding:4px 12px;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">Login</button>
+            <span id="bc-login-status" style="font-size:12px;color:#94a3b8;"></span>
+        `;
+
+        // Insert at the top of toolbar
+        toolbar.insertBefore(widget, toolbar.firstChild);
+
+        // Wire up login button
+        const btn = widget.querySelector('#bc-login-btn');
+        const userInput = widget.querySelector('#bc-user');
+        const passInput = widget.querySelector('#bc-pass');
+        const statusEl = widget.querySelector('#bc-login-status');
+
+        async function attemptLogin() {
+            const user = userInput.value.trim();
+            const pass = passInput.value.trim();
+            if (!user || !pass) {
+                statusEl.textContent = 'User and pass required';
+                statusEl.style.color = '#ef4444';
+                return;
+            }
+            btn.disabled = true;
+            statusEl.textContent = 'Logging in...';
+            statusEl.style.color = '#94a3b8';
+
+            const result = await window.SeaglassAPI.login(state.activeApp.id, user, pass);
+
+            if (result.success) {
+                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;"><i class='bx bx-user-check'></i> Logged in as <strong>${result.user}</strong></span>`;
+                // Refresh results to get enriched data
+                _loadResults();
+            } else {
+                statusEl.textContent = result.error;
+                statusEl.style.color = '#ef4444';
+                btn.disabled = false;
+            }
+        }
+
+        btn.addEventListener('click', attemptLogin);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') attemptLogin(); });
+        passInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') attemptLogin(); });
+    }
+
     // ── Fetch & inject ─────────────────────────────────────────────────────────
 
     async function _loadToolbar(url) {
@@ -149,6 +215,8 @@ window.SeaglassTabs = (function () {
             if (r.ok) {
                 window.SeaglassDOM.tabToolbar.innerHTML = await r.text();
                 _initFilterBuilder();
+                // Inject login widget for brinecrypt service
+                _injectLoginWidget();
             }
         } catch (_) {}
     }
@@ -313,6 +381,8 @@ window.SeaglassTabs = (function () {
         _stopPolling();
         _currentParams  = {};
         _activeFilters  = [];
+        // Clear any stored login state
+        _clearLoginState();
         window.SeaglassDOM.tabToolbar.innerHTML = "";
         window.SeaglassDOM.tabResults.innerHTML = "";
 
@@ -362,6 +432,10 @@ window.SeaglassTabs = (function () {
                 btn.classList.add("active");
                 state.activeTabId = tab.id;
                 _activateTab(app, tab);
+                // Re-inject login widget for brinecrypt when switching tabs
+                if (app.id === 'brinecrypt') {
+                    _injectLoginWidget();
+                }
             });
 
             tabbar.insertBefore(btn, tabsRight);
@@ -372,5 +446,8 @@ window.SeaglassTabs = (function () {
 
     _initDelegation();
 
-    return { renderTabs };
+    return { 
+        renderTabs,
+        _injectLoginWidget  // Export for rail.js to call
+    };
 })();

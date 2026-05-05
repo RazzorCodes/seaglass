@@ -23,6 +23,19 @@ window.SeaglassRail = (function () {
         window.SeaglassTint.setTint(app.color);
         window.SeaglassTabs.renderTabs(app);
         window.SeaglassContent.setServiceContent(app);
+
+        // Trigger login widget injection for brinecrypt
+        if (app.id === 'brinecrypt') {
+            // The login widget will be injected by _loadToolbar -> _injectLoginWidget
+            // But if the toolbar hasn't loaded yet, we need to ensure it happens
+            setTimeout(() => {
+                const toolbar = window.SeaglassDOM.tabToolbar;
+                if (toolbar && !toolbar.querySelector('#brinecrypt-login-widget')) {
+                    // Force injection if toolbar is empty or doesn't have the widget
+                    window.SeaglassTabs._injectLoginWidget?.();
+                }
+            }, 100);
+        }
     }
 
     async function refreshHealthForButton(btn, app) {

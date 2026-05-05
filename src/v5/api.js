@@ -18,8 +18,28 @@ window.SeaglassAPI = (function () {
         }
     }
 
+    async function login(serviceId, user, pass) {
+        try {
+            const r = await fetch(`http://brinecrypt.lan/auth/login`, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, pass })
+            });
+            if (r.ok) {
+                return { success: true, user };
+            }
+            const text = await r.text();
+            return { success: false, error: text || 'Unauthorized' };
+        } catch (_e) {
+            return { success: false, error: 'Connection failed' };
+        }
+    }
+
     return {
         loadApps,
-        getHealth
+        getHealth,
+        login
     };
 })();
