@@ -1,4 +1,22 @@
 window.SeaglassAPI = (function () {
+    // Will be populated from /api/config on first use
+    let _brinecryptUrl = null;
+
+    async function _loadConfig() {
+        if (_brinecryptUrl) return;
+        try {
+            const r = await fetch('/api/config');
+            if (r.ok) {
+                const cfg = await r.json();
+                _brinecryptUrl = cfg.brinecrypt_url || 'http://brinecrypt.lan';
+            } else {
+                _brinecryptUrl = 'http://brinecrypt.lan';
+            }
+        } catch (_e) {
+            _brinecryptUrl = 'http://brinecrypt.lan';
+        }
+    }
+
     async function loadApps() {
         return window.APP_CONFIG || [];
     }
@@ -19,8 +37,11 @@ window.SeaglassAPI = (function () {
     }
 
     async function login(serviceId, user, pass) {
+        // Ensure config is loaded (brinecrypt URL)
+        await _loadConfig();
+
         try {
-            const r = await fetch(`http://brinecrypt.lan/auth/login`, {
+            const r = await fetch(`${_brinecryptUrl}/auth/login`, {
                 method: 'POST',
                 mode: 'cors',
                 credentials: 'include',

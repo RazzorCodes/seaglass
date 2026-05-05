@@ -29,5 +29,13 @@ def service_health(service):
     return jsonify({"service": service, "status": "mock"})
 
 
+@app.route("/api/config")
+def api_config():
+    """Return frontend configuration, including the brinecrypt URL."""
+    return jsonify({
+        "brinecrypt_url": app.config["BRINECRYPT_URL"]
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
