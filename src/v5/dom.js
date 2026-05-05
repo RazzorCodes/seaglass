@@ -9,6 +9,8 @@ window.SeaglassDOM = {
     contentLbl: document.getElementById("content-label"),
     contentSub: document.getElementById("content-sublabel"),
     tabPane: document.getElementById("tab-pane"),
+    tabToolbar: document.getElementById("tab-toolbar"),
+    tabResults: document.getElementById("tab-results"),
 };
 
 window.SeaglassDOM.spacer = window.SeaglassDOM.rail.querySelector(".rail-spacer");

@@ -1,2 +1,3 @@
 .aider*
 helm/values.local.yaml
+*.pyc

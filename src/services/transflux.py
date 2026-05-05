@@ -51,7 +51,8 @@ def _enrich(items: list[dict]) -> list[dict]:
         item["_size"]     = _fmt_bytes(size)
         item["_duration"] = _fmt_duration(dur)
         item["_quality"]  = _quality_label(res) or "Unknown"
-        item["_codec"]    = item.get("codec") or "???"
+        raw_codec = (item.get("codec") or "").lower()
+        item["_codec"] = {"hevc": "H.265", "h264": "H.264", "av1": "AV1"}.get(raw_codec, raw_codec.upper() or "???")
         item["_res"]      = f"{res[0]}x{res[1]}" if isinstance(res, list) and len(res) == 2 else "—"
         item["_ar"]       = item.get("dar") or item.get("sar") or "—"
         item["_mbs"]      = f"{size * 8 / 1_000_000 / dur:.2f} Mb/s" if dur else "0 Mb/s"
@@ -63,18 +64,44 @@ def _filter(items: list[dict], args) -> list[dict]:
         items = [i for i in items
                  if q in (i.get("name") or "").lower()
                  or q in (i.get("path") or "").lower()]
-
-    for raw in args.getlist("filter"):
-        kind, _, val = raw.partition("|")
-        if not val:
-            continue
-        if kind == "status":
-            items = [i for i in items if (i.get("status") or "").lower() == val.lower()]
-        elif kind == "codec":
-            items = [i for i in items if val.lower() in (i.get("codec") or "").lower()]
-        elif kind == "quality":
-            items = [i for i in items if val.lower() in _quality_label(i.get("resolution")).lower()]
-
+    _alias = {"h265": "hevc", "hevc": "h265"}
+    if statuses := [s.lower() for s in args.getlist("status") if s]:
+        items = [i for i in items if (i.get("status") or "").lower() in statuses]
+    if status_ne := [s.lower() for s in args.getlist("status_ne") if s]:
+        items = [i for i in items if (i.get("status") or "").lower() not in status_ne]
+    if codecs := [c.lower() for c in args.getlist("codec") if c]:
+        items = [i for i in items if any(
+            c in (i.get("codec") or "").lower()
+            or _alias.get(c, "") in (i.get("codec") or "").lower()
+            for c in codecs
+        )]
+    if codec_ne := [c.lower() for c in args.getlist("codec_ne") if c]:
+        items = [i for i in items if not any(
+            c in (i.get("codec") or "").lower()
+            or _alias.get(c, "") in (i.get("codec") or "").lower()
+            for c in codec_ne
+        )]
+    if qualities := [q.lower() for q in args.getlist("quality") if q]:
+        items = [i for i in items if any(
+            q in _quality_label(i.get("resolution")).lower() for q in qualities
+        )]
+    if quality_ne := [q.lower() for q in args.getlist("quality_ne") if q]:
+        items = [i for i in items if not any(
+            q in _quality_label(i.get("resolution")).lower() for q in quality_ne
+        )]
+    if ars := [a.strip() for a in args.getlist("ar") if a.strip()]:
+        items = [i for i in items if (i.get("dar") or i.get("sar") or "").strip() in ars]
+    if ar_ne := [a.strip() for a in args.getlist("ar_ne") if a.strip()]:
+        items = [i for i in items if (i.get("dar") or i.get("sar") or "").strip() not in ar_ne]
+    def _mbs(i):
+        size, dur = i.get("size") or 0, i.get("duration") or 0
+        return size * 8 / 1_000_000 / dur if dur else 0
+    if raw := args.get("mbs_gte"):
+        try: items = [i for i in items if _mbs(i) >= float(raw)]
+        except ValueError: pass
+    if raw := args.get("mbs_lte"):
+        try: items = [i for i in items if _mbs(i) <= float(raw)]
+        except ValueError: pass
     return items
 
 
@@ -93,6 +120,10 @@ def _sort(items: list[dict], args) -> list[dict]:
             r = item.get("resolution")
             return r[1] if isinstance(r, list) and len(r) >= 2 else 0
         if col == "codec":    return (item.get("codec") or "").lower()
+        if col == "mbs":
+            size, dur = item.get("size") or 0, item.get("duration") or 0
+            return size * 8 / 1_000_000 / dur if dur else 0
+        if col == "ar":       return (item.get("dar") or item.get("sar") or "").lower()
         return ""
 
     return sorted(items, key=key, reverse=reverse)
@@ -112,15 +143,33 @@ def _proxy(method: str, path: str, *, timeout: int = 5, **kwargs) -> tuple[dict,
 
 # ── Partials ───────────────────────────────────────────────────────────────────
 
-@bp.get("/partial/transflux/library")
-def partial_library():
+@bp.get("/partial/transflux/library/toolbar")
+def partial_library_toolbar():
+    ar_values: list[str] = []
+    try:
+        r = http.get(f"{_url()}/list", timeout=10)
+        if r.ok:
+            seen: set[str] = set()
+            for item in r.json():
+                ar = (item.get("dar") or item.get("sar") or "").strip()
+                if ar and ar not in seen:
+                    seen.add(ar)
+                    ar_values.append(ar)
+            ar_values.sort()
+    except http.RequestException:
+        pass
+    return render_template("partials/transflux/library_toolbar.html", ar_values=ar_values)
+
+
+@bp.get("/partial/transflux/library/results")
+def partial_library_results():
     try:
         r = http.get(f"{_url()}/list", timeout=10)
         r.raise_for_status()
         items = _enrich(_sort(_filter(r.json(), request.args), request.args))
-        return render_template("partials/transflux/library.html", items=items, args=request.args, error=None)
+        return render_template("partials/transflux/library_results.html", items=items, args=request.args, error=None)
     except http.RequestException as exc:
-        return render_template("partials/transflux/library.html", items=None, args=request.args, error=str(exc))
+        return render_template("partials/transflux/library_results.html", items=None, args=request.args, error=str(exc))
 
 
 @bp.get("/partial/transflux/queue")
@@ -167,7 +216,10 @@ def api_cancel(task_uuid: str):
 def api_health():
     try:
         r = http.get(f"{_url()}/version", timeout=3)
-        status = "online" if r.ok else "degraded"
+        if r.ok:
+            ver = r.json().get("version")
+            return jsonify({"service": "transflux", "status": "online",
+                            "version": f"v{ver}" if ver else None})
+        return jsonify({"service": "transflux", "status": "degraded"})
     except http.RequestException:
-        status = "offline"
-    return jsonify({"service": "transflux", "status": status})
+        return jsonify({"service": "transflux", "status": "offline"})

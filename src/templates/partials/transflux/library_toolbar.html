@@ -1,0 +1,17 @@
+<div id="fb-ar-values" data-values="{{ ar_values | tojson }}" hidden></div>
+<div class="pane-toolbar">
+    <input class="pane-search" type="search" placeholder="Search by name…" data-filter="q" autocomplete="off">
+    <select class="filter-select" id="fb-field">
+        <option value="">Add filter…</option>
+    </select>
+    <span id="fb-controls" hidden>
+        <select class="filter-select" id="fb-op" hidden></select>
+        <select class="filter-select" id="fb-val-select" hidden></select>
+        <input class="filter-val-input" id="fb-val-input" hidden type="text" placeholder="Value…">
+        <button class="btn btn-sm" id="fb-add">Add</button>
+    </span>
+    <div class="toolbar-spacer"></div>
+    <button class="btn btn-ghost" data-action="scan" data-url="/api/transflux/scan" data-method="PUT">Scan</button>
+    <span class="refresh-spinner" data-refresh-spinner hidden></span>
+</div>
+<div class="filter-tags" id="filter-tags"></div>

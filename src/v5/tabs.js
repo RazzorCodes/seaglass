@@ -1,9 +1,9 @@
 window.SeaglassTabs = (function () {
     let _pollTimer = null;
+    let _refreshTimer = null;     // 10-min token refresh interval (page-lifetime)
     let _currentUrl = null;
     let _currentParams = {};      // sort, dir, q (from search input)
     let _activeFilters = [];      // [{ field, op, val, label }]
-    let _brinecryptToken = null;  // stored token for brinecrypt API calls
 
     const FILTER_FIELDS = {
         status:  { label: "Status",  ops: ["is", "is not"], values: ["Pending", "Done", "Error", "Running"] },
@@ -33,8 +33,14 @@ window.SeaglassTabs = (function () {
     }
 
     function _clearLoginState() {
-        // Clear stored token when switching tabs
-        _brinecryptToken = null;
+        // Token lives server-side; nothing to clear client-side.
+    }
+
+    function _startRefreshTimer() {
+        if (_refreshTimer) return;
+        _refreshTimer = setInterval(async () => {
+            try { await fetch('/api/brinecrypt/refresh', { method: 'POST' }); } catch (_) {}
+        }, 10 * 60 * 1000);
     }
 
     function _renderFilterTags() {
@@ -147,6 +153,18 @@ window.SeaglassTabs = (function () {
         });
     }
 
+    // ── Logout ─────────────────────────────────────────────────────────────────
+
+    function _wireLogout(widget) {
+        const btn = widget.querySelector('#bc-logout-btn');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            await fetch('/api/brinecrypt/logout', { method: 'POST' }).catch(() => {});
+            window.SeaglassBrinecrypt?.reset();
+            resetLoginWidget();
+        });
+    }
+
     // ── Login widget injection ─────────────────────────────────────────────────
 
     function _injectLoginWidget() {
@@ -172,6 +190,16 @@ window.SeaglassTabs = (function () {
         // Insert at the top of toolbar — works even if toolbar is empty
         toolbar.insertBefore(widget, toolbar.firstChild);
 
+        // Check for existing server-side session before showing the login form
+        fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
+            if (data.logged_in) {
+                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${data.user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
+                _wireLogout(widget);
+                _startRefreshTimer();
+                window.SeaglassBrinecrypt?.onLogin();
+            }
+        }).catch(() => {});
+
         // Wire up login button
         const btn = widget.querySelector('#bc-login-btn');
         const userInput = widget.querySelector('#bc-user');
@@ -193,10 +221,9 @@ window.SeaglassTabs = (function () {
             const result = await window.SeaglassAPI.login(state.activeApp.id, user, pass);
 
             if (result.success) {
-                _brinecryptToken = result.token || null;
-                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;"><i class='bx bx-user-check'></i> Logged in as <strong>${result.user}</strong></span>`;
-                // Refresh results to get enriched data
-                _loadResults();
+                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${result.user}</strong></span>`;
+                _startRefreshTimer();
+                window.SeaglassBrinecrypt?.onLogin();
             } else {
                 statusEl.textContent = result.error;
                 statusEl.style.color = '#ef4444';
@@ -244,12 +271,7 @@ window.SeaglassTabs = (function () {
         const url = qs ? `${_currentUrl}?${qs}` : _currentUrl;
         _setSpinner(true);
         try {
-            const headers = {};
-            // If we have a brinecrypt token, include it
-            if (_brinecryptToken) {
-                headers['Authorization'] = `Bearer ${_brinecryptToken}`;
-            }
-            const r = await fetch(url, { headers });
+            const r = await fetch(url);
             if (!r.ok) {
                 // Show a friendly message instead of blank results
                 window.SeaglassDOM.tabResults.innerHTML = `<div style="padding:2rem;text-align:center;color:#94a3b8;">Service returned status ${r.status}. Try logging in above.</div>`;
@@ -301,6 +323,14 @@ window.SeaglassTabs = (function () {
         switch (data.action) {
             case "retry":
                 _loadResults();
+                return;
+
+            case "bc-expand-ns":
+            case "bc-expand-rs":
+            case "bc-select-rs":
+            case "bc-select-ver":
+            case "bc-ns-refresh":
+                window.SeaglassBrinecrypt?.handleAction(data.action, btn);
                 return;
 
             case "batch-clear": {
@@ -444,10 +474,6 @@ window.SeaglassTabs = (function () {
                 btn.classList.add("active");
                 state.activeTabId = tab.id;
                 _activateTab(app, tab);
-                // Inject login widget for brinecrypt on first tab
-                if (app.id === 'brinecrypt') {
-                    _injectLoginWidget();
-                }
             }
 
             btn.addEventListener("click", () => {
@@ -455,10 +481,6 @@ window.SeaglassTabs = (function () {
                 btn.classList.add("active");
                 state.activeTabId = tab.id;
                 _activateTab(app, tab);
-                // Re-inject login widget for brinecrypt when switching tabs
-                if (app.id === 'brinecrypt') {
-                    _injectLoginWidget();
-                }
             });
 
             tabbar.insertBefore(btn, tabsRight);
@@ -469,8 +491,15 @@ window.SeaglassTabs = (function () {
 
     _initDelegation();
 
-    return { 
+    function resetLoginWidget() {
+        const existing = window.SeaglassDOM.tabToolbar.querySelector('#brinecrypt-login-widget');
+        if (existing) existing.remove();
+        _injectLoginWidget();
+    }
+
+    return {
         renderTabs,
-        _injectLoginWidget  // Export for rail.js to call
+        _injectLoginWidget,
+        resetLoginWidget,
     };
 })();

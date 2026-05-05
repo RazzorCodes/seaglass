@@ -1,0 +1,32 @@
+[2026-05-04 08:40:02][INFO][auto][trillium-mcp/mcp.go:20] === mcp === trillium-mcp === golang ===
+[2026-05-04 08:40:02][INFO][auto][trillium-mcp/mcp.go:21] mcp: trillium-mcp/0.0.1
+[2026-05-04 08:40:02][INFO][auto][trillium-mcp/mcp.go:22] Initializing...
+[2026-05-04 08:40:02][INFO][auto][mcp/tools.go:26] Setting up...
+[2026-05-04 08:40:02][INFO][auto][mcp/tools.go:33] AppVersion: 0.0.1
+[2026-05-04 08:40:02][INFO][auto][mcp/tools.go:34] EtapiAddress: http://notes.lan/etapi
+[2026-05-04 08:40:02][INFO][auto][mcp/tools.go:41] Adding tools
+[2026-05-04 08:40:02][INFO][auto][mcp/tools.go:73] Sucessfully setup trillium mcp
+[2026-05-04 08:40:17][INFO][auto][trillium-mcp/mcp.go:20] === mcp === trillium-mcp === golang ===
+[2026-05-04 08:40:17][INFO][auto][trillium-mcp/mcp.go:21] mcp: trillium-mcp/0.0.1
+[2026-05-04 08:40:17][INFO][auto][trillium-mcp/mcp.go:22] Initializing...
+[2026-05-04 08:40:17][INFO][auto][mcp/tools.go:26] Setting up...
+[2026-05-04 08:40:17][INFO][auto][mcp/tools.go:33] AppVersion: 0.0.1
+[2026-05-04 08:40:17][INFO][auto][mcp/tools.go:34] EtapiAddress: http://notes.lan/etapi
+[2026-05-04 08:40:17][INFO][auto][mcp/tools.go:41] Adding tools
+[2026-05-04 08:40:17][INFO][auto][mcp/tools.go:73] Sucessfully setup trillium mcp
+[2026-05-04 08:41:24][INFO][auto][trillium-mcp/mcp.go:20] === mcp === trillium-mcp === golang ===
+[2026-05-04 08:41:24][INFO][auto][trillium-mcp/mcp.go:21] mcp: trillium-mcp/0.0.1
+[2026-05-04 08:41:24][INFO][auto][trillium-mcp/mcp.go:22] Initializing...
+[2026-05-04 08:41:24][INFO][auto][mcp/tools.go:26] Setting up...
+[2026-05-04 08:41:24][INFO][auto][mcp/tools.go:33] AppVersion: 0.0.1
+[2026-05-04 08:41:24][INFO][auto][mcp/tools.go:34] EtapiAddress: http://notes.lan/etapi
+[2026-05-04 08:41:24][INFO][auto][mcp/tools.go:41] Adding tools
+[2026-05-04 08:41:24][INFO][auto][mcp/tools.go:73] Sucessfully setup trillium mcp
+[2026-05-05 21:42:54][INFO][auto][trillium-mcp/mcp.go:20] === mcp === trillium-mcp === golang ===
+[2026-05-05 21:42:54][INFO][auto][trillium-mcp/mcp.go:21] mcp: trillium-mcp/0.0.1
+[2026-05-05 21:42:54][INFO][auto][trillium-mcp/mcp.go:22] Initializing...
+[2026-05-05 21:42:54][INFO][auto][mcp/tools.go:26] Setting up...
+[2026-05-05 21:42:54][INFO][auto][mcp/tools.go:33] AppVersion: 0.0.1
+[2026-05-05 21:42:54][INFO][auto][mcp/tools.go:34] EtapiAddress: http://notes.lan/etapi
+[2026-05-05 21:42:54][INFO][auto][mcp/tools.go:41] Adding tools
+[2026-05-05 21:42:54][INFO][auto][mcp/tools.go:73] Sucessfully setup trillium mcp

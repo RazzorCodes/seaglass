@@ -12,6 +12,7 @@ services:
     environment:
       - TRANSFLUX_URL=http://api.transcode.spacesaver.lan
       - BRINECRYPT_URL=http://brinecrypt.lan
+      - SECRET_KEY=dev-seaglass-local-secret-not-for-prod
     dns:
       - 192.168.0.127
     volumes:
