@@ -44,7 +44,16 @@ window.SeaglassAPI = (function () {
             const r = await fetch(`${_brinecryptUrl}/auth/login`, {
                 method: 'POST',
                 mode: 'cors',
-                // Remove credentials: 'include' — brinecrypt doesn't support credentialed CORS
+                // IMPORTANT: The brinecrypt server MUST return CORS headers on ALL responses,
+                // not just the OPTIONS preflight. The server must include:
+                //   Access-Control-Allow-Origin: http://localhost:5000
+                //   Access-Control-Allow-Credentials: true
+                //   Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+                //   Access-Control-Allow-Headers: Content-Type, Authorization
+                // If using Flask, use Flask-CORS or an @app.after_request handler.
+                // Once the server is fixed, you can uncomment credentials: 'include' below
+                // to send session cookies.
+                // credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user, pass })
             });
