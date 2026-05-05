@@ -3,6 +3,7 @@ window.SeaglassTabs = (function () {
     let _currentUrl = null;
     let _currentParams = {};      // sort, dir, q (from search input)
     let _activeFilters = [];      // [{ field, op, val, label }]
+    let _brinecryptToken = null;  // stored token for brinecrypt API calls
 
     const FILTER_FIELDS = {
         status:  { label: "Status",  ops: ["is", "is not"], values: ["Pending", "Done", "Error", "Running"] },
@@ -32,8 +33,8 @@ window.SeaglassTabs = (function () {
     }
 
     function _clearLoginState() {
-        // No persistent state to clear — login is session-only via cookies
-        // This ensures the widget is recreated fresh on each tab switch
+        // Clear stored token when switching tabs
+        _brinecryptToken = null;
     }
 
     function _renderFilterTags() {
@@ -192,6 +193,7 @@ window.SeaglassTabs = (function () {
             const result = await window.SeaglassAPI.login(state.activeApp.id, user, pass);
 
             if (result.success) {
+                _brinecryptToken = result.token || null;
                 widget.innerHTML = `<span style="color:#22c55e;font-size:13px;"><i class='bx bx-user-check'></i> Logged in as <strong>${result.user}</strong></span>`;
                 // Refresh results to get enriched data
                 _loadResults();
@@ -242,7 +244,12 @@ window.SeaglassTabs = (function () {
         const url = qs ? `${_currentUrl}?${qs}` : _currentUrl;
         _setSpinner(true);
         try {
-            const r = await fetch(url);
+            const headers = {};
+            // If we have a brinecrypt token, include it
+            if (_brinecryptToken) {
+                headers['Authorization'] = `Bearer ${_brinecryptToken}`;
+            }
+            const r = await fetch(url, { headers });
             if (!r.ok) {
                 // Show a friendly message instead of blank results
                 window.SeaglassDOM.tabResults.innerHTML = `<div style="padding:2rem;text-align:center;color:#94a3b8;">Service returned status ${r.status}. Try logging in above.</div>`;

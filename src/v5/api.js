@@ -44,12 +44,20 @@ window.SeaglassAPI = (function () {
             const r = await fetch(`${_brinecryptUrl}/auth/login`, {
                 method: 'POST',
                 mode: 'cors',
-                credentials: 'include',
+                // Remove credentials: 'include' — brinecrypt doesn't support credentialed CORS
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user, pass })
             });
             if (r.ok) {
-                return { success: true, user };
+                // Try to extract a token from the response if present
+                let token = null;
+                try {
+                    const data = await r.json();
+                    token = data.token || data.access_token || null;
+                } catch (_) {
+                    // Response might be empty or not JSON
+                }
+                return { success: true, user, token };
             }
             const text = await r.text();
             return { success: false, error: text || 'Unauthorized' };
