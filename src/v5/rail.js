@@ -29,13 +29,18 @@ window.SeaglassRail = (function () {
         const result = await window.SeaglassAPI.getHealth(app.id);
         const nextStatus = result && result.status ? result.status : app.status;
 
-        if (nextStatus === "mock") {
-            return;
-        }
+        if (nextStatus === "mock") return;
 
         app.status = nextStatus;
         btn.dataset.status = nextStatus;
         btn.dataset.tip = app.label + (nextStatus !== "online" ? ` · ${nextStatus}` : "");
+
+        if (result.version && result.version !== app.version) {
+            app.version = result.version;
+            if (window.SeaglassState.activeApp === app) {
+                window.SeaglassDOM.tabsRight.textContent = `${app.label}: ${app.version}`;
+            }
+        }
     }
 
     function renderRail(apps) {
