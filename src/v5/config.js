@@ -18,9 +18,9 @@ window.APP_CONFIG = [
         color: "#4338ca",
         version: "v2.1.0",
         tabs: [
-            { id: "resources", label: "Resources" },
-            { id: "users", label: "Users" },
-            { id: "sa", label: "SA" }
+            { id: "resources", label: "Resources", toolbarUrl: "/partial/brinecrypt/resources/toolbar", url: "/partial/brinecrypt/resources/results" },
+            { id: "users", label: "Users", toolbarUrl: "/partial/brinecrypt/users/toolbar", url: "/partial/brinecrypt/users/results" },
+            { id: "sa", label: "SA", toolbarUrl: "/partial/brinecrypt/sa/toolbar", url: "/partial/brinecrypt/sa/results" }
         ],
         icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
     },

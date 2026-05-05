@@ -168,7 +168,7 @@ window.SeaglassTabs = (function () {
             <span id="bc-login-status" style="font-size:12px;color:#94a3b8;"></span>
         `;
 
-        // Insert at the top of toolbar
+        // Insert at the top of toolbar — works even if toolbar is empty
         toolbar.insertBefore(widget, toolbar.firstChild);
 
         // Wire up login button
@@ -396,19 +396,21 @@ window.SeaglassTabs = (function () {
         window.SeaglassDOM.tabResults.innerHTML = "";
 
         // Allow degraded services to show tabs (for login widget)
-        if (!tab.url || (app.status !== "online" && app.status !== "degraded")) {
+        if (app.status !== "online" && app.status !== "degraded") {
             window.SeaglassContent.showState();
             return;
         }
 
-        _currentUrl = tab.url;
+        // Always show pane for online/degraded so login widget is visible
         window.SeaglassContent.showPane();
 
         if (tab.toolbarUrl) _loadToolbar(tab.toolbarUrl);
-        _loadResults();
-
-        if (tab.poll) {
-            _pollTimer = setInterval(_loadResults, tab.poll);
+        if (tab.url) {
+            _currentUrl = tab.url;
+            _loadResults();
+            if (tab.poll) {
+                _pollTimer = setInterval(_loadResults, tab.poll);
+            }
         }
     }
 
@@ -435,6 +437,10 @@ window.SeaglassTabs = (function () {
                 btn.classList.add("active");
                 state.activeTabId = tab.id;
                 _activateTab(app, tab);
+                // Inject login widget for brinecrypt on first tab
+                if (app.id === 'brinecrypt') {
+                    _injectLoginWidget();
+                }
             }
 
             btn.addEventListener("click", () => {
