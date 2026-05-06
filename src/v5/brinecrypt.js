@@ -2,6 +2,15 @@ window.SeaglassBrinecrypt = (function () {
   const _expandedNs = new Set();
   const _expandedRs = new Set();
 
+  let _user = null;
+
+  // ── Session (display only — token lives server-side) ──────────────────────
+
+  function setSession(user) { _user = user; }
+  function clearSession()   { _user = null; }
+  function hasSession()     { return !!_user; }
+  function getUser()        { return _user; }
+
   // ── Logging ────────────────────────────────────────────────────────────────
 
   function _ts() {
@@ -23,13 +32,7 @@ window.SeaglassBrinecrypt = (function () {
     const data = await r.json();
     if (!r.ok) {
       _logWarn(path, data);
-      if (r.status === 401) {
-        await fetch("/api/brinecrypt/logout", { method: "POST" }).catch(
-          () => {},
-        );
-        window.SeaglassTabs?.resetLoginWidget();
-      }
-      throw new Error(data.error || `HTTP ${r.status}`);
+      throw new Error(data.error || data.message || `HTTP ${r.status}`);
     }
     _logOk(path, data);
     return data;
@@ -411,6 +414,7 @@ window.SeaglassBrinecrypt = (function () {
   }
 
   function reset() {
+    clearSession();
     _expandedNs.clear();
     _expandedRs.clear();
     const body = _tree();
@@ -419,5 +423,5 @@ window.SeaglassBrinecrypt = (function () {
     if (detail) detail.innerHTML = '<div class="pane-empty"><p>Select a resource</p></div>';
   }
 
-  return { onLogin, handleAction, reset };
+  return { setSession, clearSession, hasSession, getUser, onLogin, handleAction, reset };
 })();

@@ -37,17 +37,27 @@ window.SeaglassAPI = (function () {
     }
 
     async function login(_serviceId, user, pass) {
+        await _loadConfig();
         try {
-            const r = await fetch('/api/brinecrypt/login', {
+            // Credentials go directly to brinecrypt — never touch the seaglass backend
+            const r = await fetch(`${_brinecryptUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user, pass })
             });
             const data = await r.json();
-            if (r.ok && data.success) {
-                return { success: true, user: data.user };
-            }
-            return { success: false, error: data.error || 'Unauthorized' };
+            if (!r.ok) return { success: false, error: data.error || data.message || 'Unauthorized' };
+
+            // Hand the token (not the credentials) to the backend for proxying
+            const sessionToken = data.session_token ?? data.token ?? data.access_token;
+            const refreshToken = data.refresh_token;
+            const store = await fetch('/api/brinecrypt/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_token: sessionToken, refresh_token: refreshToken, user })
+            });
+            if (!store.ok) return { success: false, error: 'Failed to store session' };
+            return { success: true, user };
         } catch (_e) {
             return { success: false, error: 'Connection failed' };
         }

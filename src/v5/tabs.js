@@ -1,6 +1,6 @@
 window.SeaglassTabs = (function () {
     let _pollTimer = null;
-    let _refreshTimer = null;     // 10-min token refresh interval (page-lifetime)
+    let _refreshTimer = null;
     let _currentUrl = null;
     let _currentParams = {};      // sort, dir, q (from search input)
     let _activeFilters = [];      // [{ field, op, val, label }]
@@ -30,10 +30,6 @@ window.SeaglassTabs = (function () {
             }
         }
         return out;
-    }
-
-    function _clearLoginState() {
-        // Token lives server-side; nothing to clear client-side.
     }
 
     function _startRefreshTimer() {
@@ -190,15 +186,24 @@ window.SeaglassTabs = (function () {
         // Insert at the top of toolbar — works even if toolbar is empty
         toolbar.insertBefore(widget, toolbar.firstChild);
 
-        // Check for existing server-side session before showing the login form
-        fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
-            if (data.logged_in) {
-                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${data.user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
-                _wireLogout(widget);
-                _startRefreshTimer();
-                window.SeaglassBrinecrypt?.onLogin();
-            }
-        }).catch(() => {});
+        // Fast path: in-memory (tab switches within the same page load)
+        if (window.SeaglassBrinecrypt?.hasSession()) {
+            const user = window.SeaglassBrinecrypt.getUser();
+            widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
+            _wireLogout(widget);
+            window.SeaglassBrinecrypt?.onLogin();
+        } else {
+            // Slow path: check Flask session (handles page reload with existing session)
+            fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
+                if (data.logged_in) {
+                    window.SeaglassBrinecrypt?.setSession(data.user);
+                    widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${data.user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
+                    _wireLogout(widget);
+                    _startRefreshTimer();
+                    window.SeaglassBrinecrypt?.onLogin();
+                }
+            }).catch(() => {});
+        }
 
         // Wire up login button
         const btn = widget.querySelector('#bc-login-btn');
@@ -221,7 +226,9 @@ window.SeaglassTabs = (function () {
             const result = await window.SeaglassAPI.login(state.activeApp.id, user, pass);
 
             if (result.success) {
-                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${result.user}</strong></span>`;
+                window.SeaglassBrinecrypt?.setSession(result.user);
+                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${result.user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
+                _wireLogout(widget);
                 _startRefreshTimer();
                 window.SeaglassBrinecrypt?.onLogin();
             } else {
@@ -427,8 +434,6 @@ window.SeaglassTabs = (function () {
         _stopPolling();
         _currentParams  = {};
         _activeFilters  = [];
-        // Clear any stored login state
-        _clearLoginState();
         window.SeaglassDOM.tabToolbar.innerHTML = "";
         window.SeaglassDOM.tabResults.innerHTML = "";
 

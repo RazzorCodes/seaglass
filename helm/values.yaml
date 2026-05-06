@@ -22,6 +22,12 @@ transflux:
 
 brinecrypt:
   url: ""
+  # publicUrl is the browser-reachable URL sent to the frontend for CORS login.
+  # Required because brinecrypt.url is an internal k8s service name that pods can
+  # resolve but browsers cannot (.lan / split-horizon DNS not configured in CoreDNS).
+  # TODO: remove publicUrl and unify once CoreDNS is configured to forward .lan
+  #       queries to the local network resolver, or a proper split-horizon DNS is in place.
+  publicUrl: ""
 
 ingress:
   enabled: true

@@ -56,6 +56,16 @@ def api_refresh():
         return jsonify({"success": False, "error": str(exc)}), 502
 
 
+@bp.post("/api/brinecrypt/token")
+def api_store_token():
+    data = request.get_json(silent=True) or {}
+    session["bc_session_token"] = data.get("session_token")
+    session["bc_refresh_token"] = data.get("refresh_token")
+    session["bc_user"]          = data.get("user")
+    session["bc_token_time"]    = time.time()
+    return jsonify({"success": True})
+
+
 @bp.post("/api/brinecrypt/logout")
 def api_logout():
     for key in ("bc_session_token", "bc_refresh_token", "bc_user", "bc_token_time"):

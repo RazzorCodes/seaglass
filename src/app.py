@@ -10,6 +10,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.config["TRANSFLUX_URL"] = os.environ.get("TRANSFLUX_URL", "http://localhost:8000").rstrip("/")
 app.config["BRINECRYPT_URL"] = os.environ.get("BRINECRYPT_URL", "http://brinecrypt.lan").rstrip("/")
+app.config["BRINECRYPT_PUBLIC_URL"] = os.environ.get("BRINECRYPT_PUBLIC_URL", app.config["BRINECRYPT_URL"]).rstrip("/")
 
 app.register_blueprint(transflux_bp)
 app.register_blueprint(brinecrypt_bp)
@@ -47,7 +48,7 @@ def get_seaglass_version():
 def api_config():
     """Return frontend configuration, including the brinecrypt URL."""
     return jsonify({
-        "brinecrypt_url": app.config["BRINECRYPT_URL"]
+        "brinecrypt_url": app.config["BRINECRYPT_PUBLIC_URL"]
     })
 
 

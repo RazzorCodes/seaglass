@@ -47,6 +47,8 @@ spec:
               value: {{ required "transflux.url is required" .Values.transflux.url | quote }}
             - name: BRINECRYPT_URL
               value: {{ required "brinecrypt.url is required" .Values.brinecrypt.url | quote }}
+            - name: BRINECRYPT_PUBLIC_URL
+              value: {{ .Values.brinecrypt.publicUrl | default .Values.brinecrypt.url | quote }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
