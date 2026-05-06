@@ -118,83 +118,40 @@ def api_session():
 # ── JSON proxy ────────────────────────────────────────────────────────────────
 
 
-@bp.get("/api/brinecrypt/v1")
-def api_v1_proxy():
+def _v1_proxy(method: str):
     path = request.args.get("path", "").strip().lstrip("/")
     token = session.get("bc_session_token")
     if not token:
         return jsonify({"error": "Not logged in"}), 401
     if not path:
         return jsonify({"error": "path required"}), 400
-    params = {}
-    if request.args.get("version"):
-        params["version"] = request.args["version"]
+    kwargs: dict = {"headers": {"Authorization": f"Bearer {token}"}, "timeout": 5}
+    if method == "GET" and request.args.get("version"):
+        kwargs["params"] = {"version": request.args["version"]}
+    if method in ("PUT", "POST"):
+        kwargs["json"] = request.get_json(silent=True) or {}
     try:
-        r = http.get(
-            f"{_url()}/api/v1/{path}",
-            headers={"Authorization": f"Bearer {token}"},
-            params=params,
-            timeout=5,
-        )
+        r = http.request(method, f"{_url()}/api/v1/{path}", **kwargs)
         if r.ok:
-            return (
-                (r.content or b"{}"),
-                r.status_code,
-                {"Content-Type": "application/json"},
-            )
-        return jsonify(
-            {"error": f"HTTP {r.status_code}: {r.text[:300]}"}
-        ), r.status_code
+            return (r.content or b"{}"), r.status_code, {"Content-Type": "application/json"}
+        return jsonify({"error": f"HTTP {r.status_code}: {r.text[:300]}"}), r.status_code
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
+
+
+@bp.get("/api/brinecrypt/v1")
+def api_v1_proxy():
+    return _v1_proxy("GET")
 
 
 @bp.delete("/api/brinecrypt/v1")
 def api_v1_delete_proxy():
-    path = request.args.get("path", "").strip().lstrip("/")
-    token = session.get("bc_session_token")
-    if not token:
-        return jsonify({"error": "Not logged in"}), 401
-    if not path:
-        return jsonify({"error": "path required"}), 400
-    try:
-        r = http.delete(
-            f"{_url()}/api/v1/{path}",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=5,
-        )
-        if r.ok:
-            return b"{}", 200, {"Content-Type": "application/json"}
-        return jsonify(
-            {"error": f"HTTP {r.status_code}: {r.text[:300]}"}
-        ), r.status_code
-    except http.RequestException as exc:
-        return jsonify({"error": str(exc)}), 502
+    return _v1_proxy("DELETE")
 
 
 @bp.put("/api/brinecrypt/v1")
 def api_v1_put_proxy():
-    path = request.args.get("path", "").strip().lstrip("/")
-    token = session.get("bc_session_token")
-    if not token:
-        return jsonify({"error": "Not logged in"}), 401
-    if not path:
-        return jsonify({"error": "path required"}), 400
-    body = request.get_json(silent=True) or {}
-    try:
-        r = http.put(
-            f"{_url()}/api/v1/{path}",
-            headers={"Authorization": f"Bearer {token}"},
-            json=body,
-            timeout=5,
-        )
-        if r.ok:
-            return b"{}", 200, {"Content-Type": "application/json"}
-        return jsonify(
-            {"error": f"HTTP {r.status_code}: {r.text[:300]}"}
-        ), r.status_code
-    except http.RequestException as exc:
-        return jsonify({"error": str(exc)}), 502
+    return _v1_proxy("PUT")
 
 
 # ── Admin proxy ───────────────────────────────────────────────────────────────
@@ -205,6 +162,12 @@ def _admin_headers():
     if not token:
         return None, (jsonify({"error": "Not logged in"}), 401)
     return {"Authorization": f"Bearer {token}"}, None
+
+
+def _admin_response(r, empty: bytes = b"{}"):
+    if r.status_code == 204:
+        return "", r.status_code
+    return (r.content or empty), r.status_code, {"Content-Type": "application/json"}
 
 
 @bp.get("/api/brinecrypt/admin/users")
@@ -239,15 +202,7 @@ def admin_create_user():
     body = request.get_json(silent=True) or {}
     try:
         r = http.post(f"{_url()}/admin/users", headers=headers, json=body, timeout=5)
-        return (
-            ("", r.status_code)
-            if r.status_code == 204
-            else (
-                r.content or b"{}",
-                r.status_code,
-                {"Content-Type": "application/json"},
-            )
-        )
+        return _admin_response(r)
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
 
@@ -259,15 +214,7 @@ def admin_delete_user(name):
         return err
     try:
         r = http.delete(f"{_url()}/admin/users/{name}", headers=headers, timeout=5)
-        return (
-            ("", r.status_code)
-            if r.status_code == 204
-            else (
-                r.content or b"{}",
-                r.status_code,
-                {"Content-Type": "application/json"},
-            )
-        )
+        return _admin_response(r)
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
 
@@ -279,18 +226,8 @@ def admin_grant_permissions():
         return err
     body = request.get_json(silent=True) or {}
     try:
-        r = http.post(
-            f"{_url()}/admin/permissions", headers=headers, json=body, timeout=5
-        )
-        return (
-            ("", r.status_code)
-            if r.status_code == 204
-            else (
-                r.content or b"{}",
-                r.status_code,
-                {"Content-Type": "application/json"},
-            )
-        )
+        r = http.post(f"{_url()}/admin/permissions", headers=headers, json=body, timeout=5)
+        return _admin_response(r)
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
 
@@ -302,18 +239,8 @@ def admin_revoke_permissions():
         return err
     body = request.get_json(silent=True) or {}
     try:
-        r = http.delete(
-            f"{_url()}/admin/permissions", headers=headers, json=body, timeout=5
-        )
-        return (
-            ("", r.status_code)
-            if r.status_code == 204
-            else (
-                r.content or b"{}",
-                r.status_code,
-                {"Content-Type": "application/json"},
-            )
-        )
+        r = http.delete(f"{_url()}/admin/permissions", headers=headers, json=body, timeout=5)
+        return _admin_response(r)
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
 

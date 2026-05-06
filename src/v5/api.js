@@ -1,21 +1,11 @@
 window.SeaglassAPI = (function () {
-    // Will be populated from /api/config on first use
+    const _DEFAULT_BC_URL = 'http://brinecrypt.lan';
     let _brinecryptUrl = null;
-
-    async function _loadConfig() {
-        if (_brinecryptUrl) return;
-        try {
-            const r = await fetch('/api/config');
-            if (r.ok) {
-                const cfg = await r.json();
-                _brinecryptUrl = cfg.brinecrypt_url || 'http://brinecrypt.lan';
-            } else {
-                _brinecryptUrl = 'http://brinecrypt.lan';
-            }
-        } catch (_e) {
-            _brinecryptUrl = 'http://brinecrypt.lan';
-        }
-    }
+    // Prefetch config immediately so it's ready before the first login attempt.
+    const _configReady = fetch('/api/config')
+        .then(r => r.ok ? r.json() : {})
+        .then(cfg => { _brinecryptUrl = cfg.brinecrypt_url || _DEFAULT_BC_URL; })
+        .catch(() => { _brinecryptUrl = _DEFAULT_BC_URL; });
 
     async function loadApps() {
         return window.APP_CONFIG || [];
@@ -37,7 +27,7 @@ window.SeaglassAPI = (function () {
     }
 
     async function login(_serviceId, user, pass) {
-        await _loadConfig();
+        await _configReady;
         try {
             // Credentials go directly to brinecrypt — never touch the seaglass backend
             const r = await fetch(`${_brinecryptUrl}/auth/login`, {

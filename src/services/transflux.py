@@ -41,6 +41,10 @@ def _quality_label(res: list | None) -> str:
     return f"{h}p"
 
 
+def _calc_mbs(size: int, dur: float) -> float:
+    return size * 8 / 1_000_000 / dur if dur else 0
+
+
 # ── Data pipeline ──────────────────────────────────────────────────────────────
 
 def _enrich(items: list[dict]) -> list[dict]:
@@ -55,7 +59,7 @@ def _enrich(items: list[dict]) -> list[dict]:
         item["_codec"] = {"hevc": "H.265", "h264": "H.264", "av1": "AV1"}.get(raw_codec, raw_codec.upper() or "???")
         item["_res"]      = f"{res[0]}x{res[1]}" if isinstance(res, list) and len(res) == 2 else "—"
         item["_ar"]       = item.get("dar") or item.get("sar") or "—"
-        item["_mbs"]      = f"{size * 8 / 1_000_000 / dur:.2f} Mb/s" if dur else "0 Mb/s"
+        item["_mbs"]      = f"{_calc_mbs(size, dur):.2f} Mb/s"
     return items
 
 
@@ -93,15 +97,16 @@ def _filter(items: list[dict], args) -> list[dict]:
         items = [i for i in items if (i.get("dar") or i.get("sar") or "").strip() in ars]
     if ar_ne := [a.strip() for a in args.getlist("ar_ne") if a.strip()]:
         items = [i for i in items if (i.get("dar") or i.get("sar") or "").strip() not in ar_ne]
-    def _mbs(i):
-        size, dur = i.get("size") or 0, i.get("duration") or 0
-        return size * 8 / 1_000_000 / dur if dur else 0
     if raw := args.get("mbs_gte"):
-        try: items = [i for i in items if _mbs(i) >= float(raw)]
-        except ValueError: pass
+        try:
+            items = [i for i in items if _calc_mbs(i.get("size") or 0, i.get("duration") or 0) >= float(raw)]
+        except ValueError:
+            pass
     if raw := args.get("mbs_lte"):
-        try: items = [i for i in items if _mbs(i) <= float(raw)]
-        except ValueError: pass
+        try:
+            items = [i for i in items if _calc_mbs(i.get("size") or 0, i.get("duration") or 0) <= float(raw)]
+        except ValueError:
+            pass
     return items
 
 
@@ -121,8 +126,7 @@ def _sort(items: list[dict], args) -> list[dict]:
             return r[1] if isinstance(r, list) and len(r) >= 2 else 0
         if col == "codec":    return (item.get("codec") or "").lower()
         if col == "mbs":
-            size, dur = item.get("size") or 0, item.get("duration") or 0
-            return size * 8 / 1_000_000 / dur if dur else 0
+            return _calc_mbs(item.get("size") or 0, item.get("duration") or 0)
         if col == "ar":       return (item.get("dar") or item.get("sar") or "").lower()
         return ""
 

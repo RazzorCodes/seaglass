@@ -46,7 +46,6 @@ def get_seaglass_version():
 
 @app.route("/api/config")
 def api_config():
-    """Return frontend configuration, including the brinecrypt URL."""
     return jsonify({
         "brinecrypt_url": app.config["BRINECRYPT_PUBLIC_URL"]
     })

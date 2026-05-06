@@ -20,16 +20,6 @@ window.SeaglassUsers = (function () {
 
   function _uname(u) { return typeof u === "string" ? u : (u.name ?? String(u)); }
 
-  // ── Escape ────────────────────────────────────────────────────────────────
-
-  function _e(s) {
-    return String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   function _date(iso) {
     if (!iso) return "—";
     try {
@@ -101,10 +91,10 @@ window.SeaglassUsers = (function () {
 
     const rows = Object.entries(byPattern).map(([pat, info]) =>
       `<tr>
-        <td><code>${_e(pat)}</code></td>
-        <td>${info.verbs.map(v => `<span class="bc-badge">${_e(v)}</span>`).join(" ")}</td>
-        <td>${_e(_date(info.created_at))}</td>
-        <td>${info.expires_at ? _e(_date(info.expires_at)) : "—"}</td>
+        <td><code>${esc(pat)}</code></td>
+        <td>${info.verbs.map(v => `<span class="bc-badge">${esc(v)}</span>`).join(" ")}</td>
+        <td>${esc(_date(info.created_at))}</td>
+        <td>${info.expires_at ? esc(_date(info.expires_at)) : "—"}</td>
       </tr>`
     ).join("");
 
@@ -150,12 +140,12 @@ window.SeaglassUsers = (function () {
 
     const rows = Object.entries(groups).map(([pat, verbSet]) => {
       const checks = VERBS.map(v =>
-        `<td class="perm-verb-col"><input type="checkbox" class="perm-verb-chk" data-pat="${_e(pat)}" data-verb="${v}" ${verbSet.has(v) ? "checked" : ""}></td>`
+        `<td class="perm-verb-col"><input type="checkbox" class="perm-verb-chk" data-pat="${esc(pat)}" data-verb="${v}" ${verbSet.has(v) ? "checked" : ""}></td>`
       ).join("");
       return `<tr>
-        <td><code>${_e(pat)}</code></td>
+        <td><code>${esc(pat)}</code></td>
         ${checks}
-        <td><button class="btn btn-danger btn-sm" data-action="bcu-edit-remove" data-pat="${_e(pat)}" style="padding:2px 8px;">✕</button></td>
+        <td><button class="btn btn-danger btn-sm" data-action="bcu-edit-remove" data-pat="${esc(pat)}" style="padding:2px 8px;">✕</button></td>
       </tr>`;
     }).join("");
 
@@ -192,10 +182,10 @@ window.SeaglassUsers = (function () {
 
   function _renderReviewStage(diff) {
     const addRows = diff.toAdd.map(p =>
-      `<tr class="perm-diff-add"><td>＋</td><td><code>${_e(p.resource_pattern)}</code></td><td>${_e(p.verb)}</td></tr>`
+      `<tr class="perm-diff-add"><td>＋</td><td><code>${esc(p.resource_pattern)}</code></td><td>${esc(p.verb)}</td></tr>`
     ).join("");
     const rmRows = diff.toRemove.map(p =>
-      `<tr class="perm-diff-rm"><td>－</td><td><code>${_e(p.resource_pattern)}</code></td><td>${_e(p.verb)}</td></tr>`
+      `<tr class="perm-diff-rm"><td>－</td><td><code>${esc(p.resource_pattern)}</code></td><td>${esc(p.verb)}</td></tr>`
     ).join("");
 
     const body = (addRows || rmRows)
@@ -295,18 +285,18 @@ window.SeaglassUsers = (function () {
   function _renderDetail(user) {
     const permsHtml = _renderPermsView(user.permissions || [], _isAdmin);
     const deleteBtn = _isAdmin
-      ? `<button class="btn btn-danger btn-sm" data-action="bcu-delete" data-user="${_e(user.name)}" data-confirm="Delete user ${_e(user.name)}?">Delete user</button>`
+      ? `<button class="btn btn-danger btn-sm" data-action="bcu-delete" data-user="${esc(user.name)}" data-confirm="Delete user ${esc(user.name)}?">Delete user</button>`
       : "";
 
     return `
 <div class="bc-card">
   <div class="bc-card-hdr">
-    <span class="bc-rname">${_e(user.name)}</span>
+    <span class="bc-rname">${esc(user.name)}</span>
     ${deleteBtn}
   </div>
   <div class="bc-mgrid">
-    <span class="bc-mk">email</span><span class="bc-mv">${_e(user.email || "—")}</span>
-    <span class="bc-mk">created</span><span class="bc-mv">${_e(_date(user.created_at))}</span>
+    <span class="bc-mk">email</span><span class="bc-mv">${esc(user.email || "—")}</span>
+    <span class="bc-mk">created</span><span class="bc-mv">${esc(_date(user.created_at))}</span>
   </div>
   ${permsHtml}
 </div>`;
@@ -329,8 +319,8 @@ window.SeaglassUsers = (function () {
       el.dataset.action = "bcu-select";
       el.dataset.user = name;
       if (name === _selectedUser) el.classList.add("selected");
-      el.innerHTML = `<span class="bc-iname">${_e(name)}</span>`;
-      if (u.email) el.insertAdjacentHTML("beforeend", `<span class="bc-badge" style="font-size:0.68rem;opacity:0.6;">${_e(u.email)}</span>`);
+      el.innerHTML = `<span class="bc-iname">${esc(name)}</span>`;
+      if (u.email) el.insertAdjacentHTML("beforeend", `<span class="bc-badge" style="font-size:0.68rem;opacity:0.6;">${esc(u.email)}</span>`);
       tree.appendChild(el);
     });
   }
@@ -373,7 +363,7 @@ window.SeaglassUsers = (function () {
       _currentPerms = user.permissions || [];
       if (det) det.innerHTML = _renderDetail(user);
     } catch (err) {
-      if (det) det.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+      if (det) det.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
     }
   }
 
@@ -426,13 +416,13 @@ window.SeaglassUsers = (function () {
             _currentPerms = user.permissions || [];
             if (det) det.innerHTML = _renderDetail(user);
           } catch (e) {
-            if (det) det.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(e.message)}</p></div>`;
+            if (det) det.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(e.message)}</p></div>`;
           }
         } else {
           tree.innerHTML = "";
         }
       } else {
-        tree.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+        tree.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
       }
     }
   }
@@ -502,7 +492,7 @@ window.SeaglassUsers = (function () {
           _renderUserList(list);
         }).catch(err => {
           const det = _detail();
-          if (det) det.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+          if (det) det.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
         });
         return true;
       }

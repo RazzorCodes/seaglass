@@ -14,16 +14,6 @@ window.SeaglassSA = (function () {
   const _tree   = () => document.getElementById("bcsa-tree-body");
   const _detail = () => document.getElementById("bcsa-detail");
 
-  // ── Escape ────────────────────────────────────────────────────────────────
-
-  function _e(s) {
-    return String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   // ── Logging ───────────────────────────────────────────────────────────────
 
   function _ts() { return new Date().toISOString().slice(11, 23); }
@@ -74,8 +64,8 @@ window.SeaglassSA = (function () {
     }
     return Object.entries(byPattern).map(([pat, verbs]) =>
       `<tr>
-        <td><code>${_e(pat)}</code></td>
-        <td>${verbs.map(v => `<span class="bc-badge">${_e(v)}</span>`).join(" ")}</td>
+        <td><code>${esc(pat)}</code></td>
+        <td>${verbs.map(v => `<span class="bc-badge">${esc(v)}</span>`).join(" ")}</td>
       </tr>`
     ).join("");
   }
@@ -87,7 +77,7 @@ window.SeaglassSA = (function () {
     return `
 <div class="bc-card">
   <div class="bc-card-hdr">
-    <span class="bc-rname">${_e(key)}</span>${staleBadge}
+    <span class="bc-rname">${esc(key)}</span>${staleBadge}
   </div>
   <div class="bc-section">
     <div class="bc-shdr">Permissions</div>
@@ -105,7 +95,7 @@ window.SeaglassSA = (function () {
 
   function _renderQueryForm(ns = "", name = "", { result = null, error = null, loading = false, stale = false } = {}) {
     const errorHtml = error
-      ? `<p class="bc-err" style="font-size:0.82rem;padding-bottom:0.5rem;">${_e(error)}</p>`
+      ? `<p class="bc-err" style="font-size:0.82rem;padding-bottom:0.5rem;">${esc(error)}</p>`
       : "";
     let resultHtml;
     if (loading) {
@@ -124,8 +114,8 @@ window.SeaglassSA = (function () {
     <span>Point Query</span>${staleBadge}
   </div>
   <div class="bc-query-fields">
-    <input type="text" id="bcsa-query-ns"   placeholder="namespace" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${_e(ns)}">
-    <input type="text" id="bcsa-query-name" placeholder="sa-name"   class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${_e(name)}">
+    <input type="text" id="bcsa-query-ns"   placeholder="namespace" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${esc(ns)}">
+    <input type="text" id="bcsa-query-name" placeholder="sa-name"   class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${esc(name)}">
     <button class="btn btn-primary btn-sm" data-action="bcsa-query-submit" style="align-self:flex-start;">Lookup</button>
   </div>
   ${resultHtml}
@@ -151,7 +141,7 @@ window.SeaglassSA = (function () {
         el.dataset.ns      = namespace;
         el.dataset.saname  = name;
         if (key === _selectedKey) el.classList.add("selected");
-        el.innerHTML = `<span class="bc-iname">${_e(key)}</span>`;
+        el.innerHTML = `<span class="bc-iname">${esc(key)}</span>`;
         tree.appendChild(el);
       });
     }
@@ -191,7 +181,7 @@ window.SeaglassSA = (function () {
       if (cached) {
         det.innerHTML = _renderDetail(key, cached, { stale: true });
       } else {
-        det.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+        det.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
       }
     }
   }
@@ -232,7 +222,7 @@ window.SeaglassSA = (function () {
   <p>You do not have rights to access this</p>
 </div>`;
       } else {
-        tree.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+        tree.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
       }
     }
   }

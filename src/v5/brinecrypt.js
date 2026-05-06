@@ -105,16 +105,6 @@ window.SeaglassBrinecrypt = (function () {
   const _tree = () => document.getElementById("bc-tree-body");
   const _detail = () => document.getElementById("bc-detail");
 
-  // ── Escape ─────────────────────────────────────────────────────────────────
-
-  function _e(s) {
-    return String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   function _date(iso) {
     if (!iso) return "—";
     try {
@@ -169,7 +159,7 @@ window.SeaglassBrinecrypt = (function () {
       body.appendChild(newEl);
       _injectPinned();
     } catch (err) {
-      body.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+      body.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
     }
   }
 
@@ -182,7 +172,7 @@ window.SeaglassBrinecrypt = (function () {
     item.dataset.action = "bc-expand-ns";
     item.dataset.ns = name;
     const pinMark = pinned ? `<span class="bc-pin-mark" title="Pinned from query">·</span>` : "";
-    item.innerHTML = `<span class="bc-chev">▶</span><span class="bc-iname">${_e(name)}</span>${pinMark}<button class="bc-icon-btn bc-ns-add" data-action="bc-add-resource" data-ns="${_e(name)}" title="Add resource to ${_e(name)}">＋</button>`;
+    item.innerHTML = `<span class="bc-chev">▶</span><span class="bc-iname">${esc(name)}</span>${pinMark}<button class="bc-icon-btn bc-ns-add" data-action="bc-add-resource" data-ns="${esc(name)}" title="Add resource to ${esc(name)}">＋</button>`;
 
     const children = document.createElement("div");
     children.className = "bc-ns-children";
@@ -232,7 +222,7 @@ window.SeaglassBrinecrypt = (function () {
           children.appendChild(_rsEl(name, rsName, type, false));
         }
       } else {
-        children.innerHTML = `<div class="bc-err-indent">${_e(err.message)}</div>`;
+        children.innerHTML = `<div class="bc-err-indent">${esc(err.message)}</div>`;
       }
     }
   }
@@ -247,13 +237,13 @@ window.SeaglassBrinecrypt = (function () {
     item.dataset.ns = ns;
     item.dataset.rs = name;
     const chevHtml = canExpand
-      ? `<span class="bc-chev" data-action="bc-expand-rs" data-ns="${_e(ns)}" data-rs="${_e(name)}">▶</span>`
+      ? `<span class="bc-chev" data-action="bc-expand-rs" data-ns="${esc(ns)}" data-rs="${esc(name)}">▶</span>`
       : `<span class="bc-chev">·</span>`;
-    item.innerHTML = `${chevHtml}<span class="bc-iname">${_e(name)}</span>`;
+    item.innerHTML = `${chevHtml}<span class="bc-iname">${esc(name)}</span>`;
     if (type)
       item.insertAdjacentHTML(
         "beforeend",
-        `<span class="bc-badge">${_e(type)}</span>`,
+        `<span class="bc-badge">${esc(type)}</span>`,
       );
 
     const children = document.createElement("div");
@@ -288,7 +278,7 @@ window.SeaglassBrinecrypt = (function () {
         }
       }
     } catch (err) {
-      if (detail) detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+      if (detail) detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
     }
   }
 
@@ -324,7 +314,7 @@ window.SeaglassBrinecrypt = (function () {
       children.innerHTML = "";
       _populateVersions(children, list, ns, name);
     } catch (err) {
-      children.innerHTML = `<div class="bc-err-ver">${_e(err.message)}</div>`;
+      children.innerHTML = `<div class="bc-err-ver">${esc(err.message)}</div>`;
     }
   }
 
@@ -338,7 +328,7 @@ window.SeaglassBrinecrypt = (function () {
       el.dataset.uuid = uuid;
       el.dataset.ns   = ns;
       el.dataset.rs   = name;
-      el.innerHTML = `<span class="bc-chev">·</span><span class="bc-iname">v${_e(String(num))}</span><span class="bc-ver-meta">${_e(_dateShort(v.created_at))}</span>`;
+      el.innerHTML = `<span class="bc-chev">·</span><span class="bc-iname">v${esc(String(num))}</span><span class="bc-ver-meta">${esc(_dateShort(v.created_at))}</span>`;
       if (uuid) el.title = uuid;
       container.appendChild(el);
     });
@@ -355,7 +345,7 @@ window.SeaglassBrinecrypt = (function () {
       const data = await _get(path);
       detail.innerHTML = _renderDetail(data);
     } catch (err) {
-      detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+      detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
     }
   }
 
@@ -384,10 +374,10 @@ window.SeaglassBrinecrypt = (function () {
     const ns = d.namespace?.name ?? d.namespace ?? null;
 
     const headerMeta = [
-      ns ? ["namespace", _e(ns)] : null,
-      d.created_at ? ["created", _e(_date(d.created_at))] : null,
-      d.created_by ? ["created by", _e(d.created_by)] : null,
-      isFlat && val.uuid ? ["uuid", _e(val.uuid)] : null,
+      ns ? ["namespace", esc(ns)] : null,
+      d.created_at ? ["created", esc(_date(d.created_at))] : null,
+      d.created_by ? ["created by", esc(d.created_by)] : null,
+      isFlat && val.uuid ? ["uuid", esc(val.uuid)] : null,
     ]
       .filter(Boolean)
       .map(
@@ -402,14 +392,14 @@ window.SeaglassBrinecrypt = (function () {
         ? `
   <div class="bc-section">
     <div class="bc-shdr">Value</div>
-    <div class="bc-sbody"><div class="bc-val-data">${_e(String(val.data))}</div></div>
+    <div class="bc-sbody"><div class="bc-val-data">${esc(String(val.data))}</div></div>
   </div>`
         : "";
 
     // Encryption section
     const encPairs = [
       val.encryption_algorithm
-        ? ["algorithm", _e(val.encryption_algorithm)]
+        ? ["algorithm", esc(val.encryption_algorithm)]
         : null,
       val.encryption_key_id != null
         ? ["key id", String(val.encryption_key_id)]
@@ -417,11 +407,11 @@ window.SeaglassBrinecrypt = (function () {
       ekey.kek_version != null
         ? ["kek version", String(ekey.kek_version)]
         : null,
-      ekey.created_at ? ["key created", _e(_date(ekey.created_at))] : null,
+      ekey.created_at ? ["key created", esc(_date(ekey.created_at))] : null,
       ekey.encrypted_dek
         ? [
             "encrypted dek",
-            `<span title="${_e(ekey.encrypted_dek)}">${_e(ekey.encrypted_dek.slice(0, 36))}…</span>`,
+            `<span title="${esc(ekey.encrypted_dek)}">${esc(ekey.encrypted_dek.slice(0, 36))}…</span>`,
           ]
         : null,
     ].filter(Boolean);
@@ -438,14 +428,14 @@ window.SeaglassBrinecrypt = (function () {
 
     const canDelete = !isFlat && d.name && ns;
     const deleteBtn = canDelete
-      ? `<button class="btn btn-danger btn-sm" data-action="bc-delete-resource" data-ns="${_e(ns)}" data-rs="${_e(d.name)}" style="margin-left:auto;">Delete</button>`
+      ? `<button class="btn btn-danger btn-sm" data-action="bc-delete-resource" data-ns="${esc(ns)}" data-rs="${esc(d.name)}" style="margin-left:auto;">Delete</button>`
       : "";
 
     return `
 <div class="bc-card">
   <div class="bc-card-hdr">
-    <span class="bc-rname">${_e(title)}</span>
-    <span class="bc-rtype bc-rtype--${_e(type.toLowerCase())}">${_e(type)}</span>
+    <span class="bc-rname">${esc(title)}</span>
+    <span class="bc-rtype bc-rtype--${esc(type.toLowerCase())}">${esc(type)}</span>
     ${deleteBtn}
   </div>
   ${headerMeta ? `<div class="bc-mgrid">${headerMeta}</div>` : ""}
@@ -470,7 +460,7 @@ window.SeaglassBrinecrypt = (function () {
     </div>`
       : `<div class="bc-add-field">
       <span class="bc-add-label">Namespace</span>
-      <span class="bc-mv" style="font-size:0.88rem;">${_e(ns)}</span>
+      <span class="bc-mv" style="font-size:0.88rem;">${esc(ns)}</span>
     </div>`;
 
     return `
@@ -511,9 +501,9 @@ window.SeaglassBrinecrypt = (function () {
 <div class="bc-add-form" id="bc-add-form">
   <div class="bc-add-form-hdr"><span>Review</span></div>
   <div class="bc-add-review-body">
-    <p>Add resource <strong>${_e(draft.name)}</strong>
-    <span class="bc-badge" style="vertical-align:middle;">${_e(draft.type)}</span>
-    to namespace <strong>${_e(draft.ns)}</strong></p>
+    <p>Add resource <strong>${esc(draft.name)}</strong>
+    <span class="bc-badge" style="vertical-align:middle;">${esc(draft.type)}</span>
+    to namespace <strong>${esc(draft.ns)}</strong></p>
   </div>
   <div style="display:flex;gap:0.5rem;padding:0.6rem 0.75rem;border-top:1px solid var(--border);">
     <button class="btn btn-ghost btn-sm" data-action="bc-add-resource-back">← Back</button>
@@ -525,7 +515,7 @@ window.SeaglassBrinecrypt = (function () {
   // ── Point query – form renderer ────────────────────────────────────────────
 
   function _renderQueryForm(ns = "", name = "", { result = null, error = null, loading = false, stale = false } = {}) {
-    const errorHtml = error ? `<p class="bc-err" style="font-size:0.82rem;padding-bottom:0.5rem;">${_e(error)}</p>` : "";
+    const errorHtml = error ? `<p class="bc-err" style="font-size:0.82rem;padding-bottom:0.5rem;">${esc(error)}</p>` : "";
     let resultHtml;
     if (loading) {
       resultHtml = `<div class="bc-query-result-area">${errorHtml}<div class="bc-loading">Looking up…</div></div>`;
@@ -543,8 +533,8 @@ window.SeaglassBrinecrypt = (function () {
     <span>Point Query</span>${staleBadge}
   </div>
   <div class="bc-query-fields">
-    <input type="text" id="bc-query-ns" placeholder="namespace" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${_e(ns)}">
-    <input type="text" id="bc-query-name" placeholder="resource-name" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${_e(name)}">
+    <input type="text" id="bc-query-ns" placeholder="namespace" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${esc(ns)}">
+    <input type="text" id="bc-query-name" placeholder="resource-name" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;" value="${esc(name)}">
     <button class="btn btn-primary btn-sm" data-action="bc-query-submit" style="align-self:flex-start;">Lookup</button>
   </div>
   ${resultHtml}
@@ -604,11 +594,11 @@ window.SeaglassBrinecrypt = (function () {
       if (detail) detail.innerHTML = `
 <div class="bc-card">
   <div class="bc-card-hdr">
-    <span class="bc-rname">${_e(draft.name)}</span>
-    <span class="bc-rtype bc-rtype--${_e(draft.type.toLowerCase())}">${_e(draft.type)}</span>
+    <span class="bc-rname">${esc(draft.name)}</span>
+    <span class="bc-rtype bc-rtype--${esc(draft.type.toLowerCase())}">${esc(draft.type)}</span>
   </div>
   <div class="bc-mgrid">
-    <span class="bc-mk">namespace</span><span class="bc-mv">${_e(draft.ns)}</span>
+    <span class="bc-mk">namespace</span><span class="bc-mv">${esc(draft.ns)}</span>
     <span class="bc-mk">status</span><span class="bc-mv" style="color:#22c55e;">created</span>
   </div>
 </div>`;
@@ -617,7 +607,7 @@ window.SeaglassBrinecrypt = (function () {
     } catch (err) {
       _draftResource = null;
       const detail = _detail();
-      if (detail) detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+      if (detail) detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
     }
   }
 
@@ -718,7 +708,7 @@ window.SeaglassBrinecrypt = (function () {
           if (detail) detail.innerHTML = '<div class="pane-empty"><p>Resource deleted</p></div>';
           _refreshNsIfOpen(ns);
         }).catch((err) => {
-          if (detail) detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${_e(err.message)}</p></div>`;
+          if (detail) detail.innerHTML = `<div class="pane-empty"><p class="bc-err">${esc(err.message)}</p></div>`;
         });
         return true;
       }
