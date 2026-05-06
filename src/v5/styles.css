@@ -1163,3 +1163,243 @@ body {
 .col-quality {
     white-space: nowrap;
 }
+
+/* ── Permission editor ────────────────────────────────────────────────────── */
+
+.perm-editor {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.perm-editor-hdr {
+    padding: 0.4rem 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.perm-editor-body {
+    padding: 0.75rem;
+}
+
+.perm-verb-col {
+    text-align: center;
+    width: 52px;
+}
+
+.perm-verb-chk {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+.perm-diff-add td { color: #22c55e; }
+.perm-diff-rm  td { color: #ef4444; }
+
+.perm-op-ok  { color: #22c55e; padding: 2px 0; }
+.perm-op-err { color: #ef4444; padding: 2px 0; }
+
+/* Add-resource form */
+
+.bc-ns-add {
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.1s;
+    font-size: 1rem;
+    padding: 0 4px;
+}
+
+.bc-ns-wrap:hover .bc-ns-add,
+.bc-ns-add:focus {
+    opacity: 1;
+}
+
+.bc-ns-new {
+    color: var(--text-secondary);
+    font-style: italic;
+    border-top: 1px solid var(--border);
+    margin-top: 0.25rem;
+}
+
+.bc-ns-new:hover {
+    color: var(--text-primary);
+}
+
+.bc-query-entry {
+    color: var(--text-secondary);
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.25rem;
+}
+
+.bc-query-entry:hover {
+    color: var(--text-primary);
+}
+
+.bc-query-fields {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.bc-query-result-area {
+    padding: 0.75rem;
+}
+
+.bc-query-result-empty {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.bc-ns--pinned .bc-iname {
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.bc-pin-mark {
+    font-size: 0.9rem;
+    color: #eab308;
+    flex-shrink: 0;
+    margin-left: -0.1rem;
+}
+
+.bc-query-cached-badge {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bc-warn-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.bc-add-form,
+#bc-query-form,
+#bcsa-query-form {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.bc-sa-forbidden {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem 1rem;
+    color: #eab308;
+    text-align: center;
+    font-size: 0.82rem;
+}
+.bc-forbidden-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid #eab308;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.bc-add-form-hdr {
+    padding: 0.4rem 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bc-add-form-body {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.bc-add-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.bc-add-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bc-type-row {
+    display: flex;
+    gap: 1.25rem;
+}
+
+.bc-type-opt {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.84rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.bc-type-opt input[type="radio"] {
+    cursor: pointer;
+    accent-color: var(--accent-primary);
+}
+
+.bc-add-review-body {
+    padding: 0.75rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.bc-add-review-body strong {
+    color: var(--text-primary);
+}
+
+.bc-add-review-body code {
+    font-family: monospace;
+    font-size: 0.83rem;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+}

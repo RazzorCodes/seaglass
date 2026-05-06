@@ -14,7 +14,7 @@ window.APP_CONFIG = [
     {
         id: "brinecrypt",
         label: "Brinecrypt",
-        status: "degraded",
+        status: "online",
         color: "#4338ca",
         version: "v2.1.0",
         tabs: [

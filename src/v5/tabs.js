@@ -157,6 +157,8 @@ window.SeaglassTabs = (function () {
         btn.addEventListener('click', async () => {
             await fetch('/api/brinecrypt/logout', { method: 'POST' }).catch(() => {});
             window.SeaglassBrinecrypt?.reset();
+            window.SeaglassUsers?.reset();
+            window.SeaglassSA?.reset();
             resetLoginWidget();
         });
     }
@@ -192,6 +194,17 @@ window.SeaglassTabs = (function () {
             widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
             _wireLogout(widget);
             window.SeaglassBrinecrypt?.onLogin();
+            window.SeaglassUsers?.onLogin();
+            window.SeaglassSA?.onLogin();
+            // Background verify — detects server restarts that invalidate the Flask session
+            fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
+                if (!data.logged_in) {
+                    window.SeaglassBrinecrypt?.reset();
+                    window.SeaglassUsers?.reset();
+                    window.SeaglassSA?.reset();
+                    resetLoginWidget();
+                }
+            }).catch(() => {});
         } else {
             // Slow path: check Flask session (handles page reload with existing session)
             fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
@@ -201,6 +214,8 @@ window.SeaglassTabs = (function () {
                     _wireLogout(widget);
                     _startRefreshTimer();
                     window.SeaglassBrinecrypt?.onLogin();
+                    window.SeaglassUsers?.onLogin();
+                    window.SeaglassSA?.onLogin();
                 }
             }).catch(() => {});
         }
@@ -231,6 +246,8 @@ window.SeaglassTabs = (function () {
                 _wireLogout(widget);
                 _startRefreshTimer();
                 window.SeaglassBrinecrypt?.onLogin();
+                window.SeaglassUsers?.onLogin();
+                window.SeaglassSA?.onLogin();
             } else {
                 statusEl.textContent = result.error;
                 statusEl.style.color = '#ef4444';
@@ -334,10 +351,43 @@ window.SeaglassTabs = (function () {
 
             case "bc-expand-ns":
             case "bc-expand-rs":
+            case "bc-show-rs":
             case "bc-select-rs":
             case "bc-select-ver":
             case "bc-ns-refresh":
+            case "bc-add-resource":
+            case "bc-add-resource-cancel":
+            case "bc-add-resource-review":
+            case "bc-add-resource-back":
+            case "bc-add-resource-confirm":
+            case "bc-delete-resource":
+            case "bc-add-new":
+            case "bc-query":
+            case "bc-query-submit":
                 window.SeaglassBrinecrypt?.handleAction(data.action, btn);
+                return;
+
+            case "bcu-refresh":
+            case "bcu-select":
+            case "bcu-new-user":
+            case "bcu-cancel-new":
+            case "bcu-create-user":
+            case "bcu-delete":
+            case "bcu-edit-perms":
+            case "bcu-edit-add":
+            case "bcu-edit-remove":
+            case "bcu-cancel-edit":
+            case "bcu-review":
+            case "bcu-back":
+            case "bcu-commit":
+                window.SeaglassUsers?.handleAction(data.action, btn);
+                return;
+
+            case "bcsa-refresh":
+            case "bcsa-select":
+            case "bcsa-query":
+            case "bcsa-query-submit":
+                window.SeaglassSA?.handleAction(data.action, btn);
                 return;
 
             case "batch-clear": {
@@ -370,6 +420,19 @@ window.SeaglassTabs = (function () {
 
     function _initDelegation() {
         const pane = window.SeaglassDOM.tabPane;
+
+        pane.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            if (e.target.id === "bc-query-ns" || e.target.id === "bc-query-name") {
+                e.preventDefault();
+                const btn = pane.querySelector('[data-action="bc-query-submit"]');
+                if (btn && !btn.disabled) btn.click();
+            } else if (e.target.id === "bcsa-query-ns" || e.target.id === "bcsa-query-name") {
+                e.preventDefault();
+                const btn = pane.querySelector('[data-action="bcsa-query-submit"]');
+                if (btn && !btn.disabled) btn.click();
+            }
+        });
 
         pane.addEventListener("input", (e) => {
             const el = e.target.closest("[data-filter]");
