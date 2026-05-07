@@ -12,6 +12,17 @@ def _url() -> str:
     return current_app.config["BRINECRYPT_URL"]
 
 
+# ── Multi-session helpers ──────────────────────────────────────────────────────
+
+def _sessions() -> dict:
+    return session.setdefault("bc_sessions", {})
+
+
+def _active_token() -> str | None:
+    u = session.get("bc_active_user", "anon")
+    return _sessions().get(u, {}).get("token")
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 
@@ -32,142 +43,290 @@ def api_health():
 # ── Auth endpoints ─────────────────────────────────────────────────────────────
 
 
-@bp.post("/api/brinecrypt/login")
-def api_login():
+@bp.post("/api/brinecrypt/anon")
+def api_anon():
+    """Fetch a fresh anonymous capability token and store it in the anon session slot."""
+    try:
+        r = http.post(f"{_url()}/auth/anon", timeout=5)
+        sess = _sessions()
+        if r.ok:
+            resp = r.json() if r.content else {}
+            token = resp.get("token") or resp.get("cap_token") or resp.get("session_token")
+            sess["anon"] = {"token": token, "token_time": time.time()}
+        else:
+            if "anon" not in sess:
+                sess["anon"] = {"token": None, "token_time": time.time()}
+        session["bc_sessions"] = sess
+        if "bc_active_user" not in session:
+            session["bc_active_user"] = "anon"
+        return jsonify({"success": r.ok, "status": r.status_code})
+    except http.RequestException as exc:
+        sess = _sessions()
+        if "anon" not in sess:
+            sess["anon"] = {"token": None, "token_time": time.time()}
+            session["bc_sessions"] = sess
+        if "bc_active_user" not in session:
+            session["bc_active_user"] = "anon"
+        return jsonify({"success": False, "error": str(exc)}), 502
+
+
+@bp.get("/api/brinecrypt/sessions")
+def api_get_sessions():
+    """Return the list of active sessions and the currently active user."""
+    sess = _sessions()
+    active = session.get("bc_active_user", "anon")
+    # Ensure anon always appears first
+    keys = list(sess.keys())
+    if "anon" in keys:
+        keys = ["anon"] + [k for k in keys if k != "anon"]
+    return jsonify({"sessions": keys, "active": active})
+
+
+@bp.post("/api/brinecrypt/sessions/active")
+def api_set_active_session():
+    """Switch the active session to a different user."""
     data = request.get_json(silent=True) or {}
-    user = data.get("user", "")
-    passwd = data.get("pass", "")
-    try:
-        r = http.post(
-            f"{_url()}/auth/login", json={"user": user, "pass": passwd}, timeout=5
-        )
-        if r.ok:
-            resp = r.json() if r.content else {}
-            token = (
-                resp.get("session_token")
-                or resp.get("token")
-                or resp.get("access_token")
-            )
-            refresh = resp.get("refresh_token")
-            session["bc_session_token"] = token
-            session["bc_refresh_token"] = refresh
-            session["bc_user"] = user
-            session["bc_token_time"] = time.time()
-            return jsonify({"success": True, "user": user})
-        return jsonify(
-            {"success": False, "error": r.text or "Unauthorized"}
-        ), r.status_code
-    except http.RequestException as exc:
-        return jsonify({"success": False, "error": str(exc)}), 502
-
-
-@bp.post("/api/brinecrypt/refresh")
-def api_refresh():
-    refresh_token = session.get("bc_refresh_token")
-    if not refresh_token:
-        return jsonify({"success": False, "error": "No refresh token"}), 401
-    try:
-        r = http.post(
-            f"{_url()}/auth/refresh", json={"refresh_token": refresh_token}, timeout=5
-        )
-        if r.ok:
-            resp = r.json() if r.content else {}
-            token = (
-                resp.get("session_token")
-                or resp.get("token")
-                or resp.get("access_token")
-            )
-            refresh = resp.get("refresh_token", refresh_token)
-            session["bc_session_token"] = token
-            session["bc_refresh_token"] = refresh
-            session["bc_token_time"] = time.time()
-            return jsonify({"success": True})
-        return jsonify(
-            {"success": False, "error": f"Refresh failed ({r.status_code})"}
-        ), r.status_code
-    except http.RequestException as exc:
-        return jsonify({"success": False, "error": str(exc)}), 502
+    user = data.get("user")
+    sess = _sessions()
+    if user not in sess:
+        return jsonify({"error": f"No session for '{user}'"}), 404
+    session["bc_active_user"] = user
+    return jsonify({"success": True, "active": user})
 
 
 @bp.post("/api/brinecrypt/token")
 def api_store_token():
+    """Add (or replace) a named session entry from a frontend-obtained token."""
     data = request.get_json(silent=True) or {}
-    session["bc_session_token"] = data.get("session_token")
-    session["bc_refresh_token"] = data.get("refresh_token")
-    session["bc_user"] = data.get("user")
-    session["bc_token_time"] = time.time()
+    user = data.get("user")
+    if not user:
+        return jsonify({"error": "user required"}), 400
+    sess = _sessions()
+    sess[user] = {
+        "token": data.get("session_token"),
+        "refresh_token": data.get("refresh_token"),
+        "token_time": time.time(),
+    }
+    session["bc_sessions"] = sess
+    session["bc_active_user"] = user
     return jsonify({"success": True})
 
 
 @bp.post("/api/brinecrypt/logout")
 def api_logout():
-    for key in ("bc_session_token", "bc_refresh_token", "bc_user", "bc_token_time"):
-        session.pop(key, None)
+    """Remove one session by user name. Anon session cannot be removed."""
+    data = request.get_json(silent=True) or {}
+    user = data.get("user")
+    sess = _sessions()
+    active = session.get("bc_active_user", "anon")
+
+    if user and user != "anon":
+        sess.pop(user, None)
+        session["bc_sessions"] = sess
+        if active == user:
+            session["bc_active_user"] = "anon"
+
     return jsonify({"success": True})
+
+
+@bp.post("/api/brinecrypt/refresh")
+def api_refresh():
+    """Refresh all sessions: rotate human session tokens and renew the anon cap_ token."""
+    sess = _sessions()
+    results = {}
+
+    for user, entry in list(sess.items()):
+        if user == "anon":
+            try:
+                r = http.post(f"{_url()}/auth/anon", timeout=5)
+                if r.ok:
+                    resp = r.json() if r.content else {}
+                    token = resp.get("token") or resp.get("cap_token") or resp.get("session_token")
+                    if token:
+                        sess["anon"]["token"] = token
+                        sess["anon"]["token_time"] = time.time()
+                    results["anon"] = "ok"
+                else:
+                    results["anon"] = f"failed({r.status_code})"
+            except http.RequestException as exc:
+                results["anon"] = f"error({exc})"
+            continue
+
+        refresh_token = entry.get("refresh_token")
+        if not refresh_token:
+            results[user] = "skipped"
+            continue
+
+        sess_token = entry.get("token")
+        headers = {"Authorization": f"Bearer {sess_token}"} if sess_token else {}
+        try:
+            r = http.post(
+                f"{_url()}/auth/refresh",
+                json={"token": refresh_token},
+                headers=headers,
+                timeout=5,
+            )
+            if r.ok:
+                resp = r.json() if r.content else {}
+                new_token = (
+                    resp.get("session_token")
+                    or resp.get("token")
+                    or resp.get("access_token")
+                )
+                new_refresh = resp.get("refresh_token", refresh_token)
+                sess[user]["token"] = new_token
+                sess[user]["refresh_token"] = new_refresh
+                sess[user]["token_time"] = time.time()
+                results[user] = "ok"
+            else:
+                results[user] = f"failed({r.status_code})"
+        except http.RequestException as exc:
+            results[user] = f"error({exc})"
+
+    session["bc_sessions"] = sess
+    return jsonify({"success": True, "results": results})
 
 
 @bp.get("/api/brinecrypt/session")
 def api_session():
-    user = session.get("bc_user")
-    token = session.get("bc_session_token")
-    if user and token:
-        return jsonify({"logged_in": True, "user": user})
+    """Backward-compat: returns login status for the active session."""
+    active = session.get("bc_active_user", "anon")
+    tok = _sessions().get(active, {}).get("token")
+    if active != "anon" and tok:
+        return jsonify({"logged_in": True, "user": active})
     return jsonify({"logged_in": False})
 
 
-# ── JSON proxy ────────────────────────────────────────────────────────────────
+# ── Resource proxy (new brinecrypt API shapes) ────────────────────────────────
 
 
-def _v1_proxy(method: str):
-    path = request.args.get("path", "").strip().lstrip("/")
-    token = session.get("bc_session_token")
-    if not token:
-        return jsonify({"error": "Not logged in"}), 401
-    if not path:
-        return jsonify({"error": "path required"}), 400
-    kwargs: dict = {"headers": {"Authorization": f"Bearer {token}"}, "timeout": 5}
-    if method == "GET" and request.args.get("version"):
-        kwargs["params"] = {"version": request.args["version"]}
-    if method in ("PUT", "POST"):
-        kwargs["json"] = request.get_json(silent=True) or {}
+def _proxy_headers():
+    """Auth headers for the active session. Anon endpoints work without auth too."""
+    tok = _active_token()
+    if tok:
+        return {"Authorization": f"Bearer {tok}"}
+    return {}
+
+
+def _proxy_err(err: str, status: int = 401):
+    return jsonify({"error": err}), status
+
+
+def _proxy_resp(r, empty: bytes = b"{}"):
+    if r.status_code == 204:
+        return "", 204
+    return (r.content or empty), r.status_code, {"Content-Type": "application/json"}
+
+
+@bp.get("/api/brinecrypt/v1/namespace")
+def api_v1_namespace_list():
+    """Proxy → GET /api/v1/namespace?op=list"""
     try:
-        r = http.request(method, f"{_url()}/api/v1/{path}", **kwargs)
-        if r.ok:
-            return (r.content or b"{}"), r.status_code, {"Content-Type": "application/json"}
-        return jsonify({"error": f"HTTP {r.status_code}: {r.text[:300]}"}), r.status_code
+        r = http.get(
+            f"{_url()}/api/v1/namespace",
+            params={"op": "list"},
+            headers=_proxy_headers(),
+            timeout=5,
+        )
+        return _proxy_resp(r, b"[]")
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
 
 
-@bp.get("/api/brinecrypt/v1")
-def api_v1_proxy():
-    return _v1_proxy("GET")
+@bp.post("/api/brinecrypt/v1/namespace")
+def api_v1_namespace_query():
+    """Proxy → POST /api/v1/namespace?op=query"""
+    body = request.get_json(silent=True) or {}
+    try:
+        r = http.post(
+            f"{_url()}/api/v1/namespace",
+            params={"op": "query"},
+            headers=_proxy_headers(),
+            json=body,
+            timeout=5,
+        )
+        return _proxy_resp(r)
+    except http.RequestException as exc:
+        return jsonify({"error": str(exc)}), 502
 
 
-@bp.delete("/api/brinecrypt/v1")
-def api_v1_delete_proxy():
-    return _v1_proxy("DELETE")
+@bp.post("/api/brinecrypt/v1/resource")
+def api_v1_resource_query():
+    """Proxy → POST /api/v1/resource?op=<query|versions>"""
+    op = request.args.get("op", "query")
+    body = request.get_json(silent=True) or {}
+    try:
+        r = http.post(
+            f"{_url()}/api/v1/resource",
+            params={"op": op},
+            headers=_proxy_headers(),
+            json=body,
+            timeout=5,
+        )
+        return _proxy_resp(r)
+    except http.RequestException as exc:
+        return jsonify({"error": str(exc)}), 502
 
 
-@bp.put("/api/brinecrypt/v1")
-def api_v1_put_proxy():
-    return _v1_proxy("PUT")
+@bp.put("/api/brinecrypt/v1/resource")
+def api_v1_resource_put():
+    """Proxy → PUT /api/v1/resource"""
+    body = request.get_json(silent=True) or {}
+    try:
+        r = http.put(
+            f"{_url()}/api/v1/resource",
+            headers=_proxy_headers(),
+            json=body,
+            timeout=5,
+        )
+        return _proxy_resp(r)
+    except http.RequestException as exc:
+        return jsonify({"error": str(exc)}), 502
+
+
+@bp.delete("/api/brinecrypt/v1/resource")
+def api_v1_resource_delete():
+    """Proxy → DELETE /api/v1/resource"""
+    body = request.get_json(silent=True) or {}
+    try:
+        r = http.delete(
+            f"{_url()}/api/v1/resource",
+            headers=_proxy_headers(),
+            json=body,
+            timeout=5,
+        )
+        return _proxy_resp(r)
+    except http.RequestException as exc:
+        return jsonify({"error": str(exc)}), 502
 
 
 # ── Admin proxy ───────────────────────────────────────────────────────────────
 
 
 def _admin_headers():
-    token = session.get("bc_session_token")
-    if not token:
+    tok = _active_token()
+    if not tok:
         return None, (jsonify({"error": "Not logged in"}), 401)
-    return {"Authorization": f"Bearer {token}"}, None
+    return {"Authorization": f"Bearer {tok}"}, None
 
 
 def _admin_response(r, empty: bytes = b"{}"):
     if r.status_code == 204:
-        return "", r.status_code
+        return "", 204
     return (r.content or empty), r.status_code, {"Content-Type": "application/json"}
+
+
+@bp.get("/api/brinecrypt/admin/user")
+def admin_get_own_user():
+    """GET /admin/user — calling user's own info (no username required)."""
+    headers, err = _admin_headers()
+    if err:
+        return err
+    try:
+        r = http.get(f"{_url()}/admin/user", headers=headers, timeout=5)
+        return _admin_response(r)
+    except http.RequestException as exc:
+        return jsonify({"error": str(exc)}), 502
 
 
 @bp.get("/api/brinecrypt/admin/users")
@@ -176,7 +335,7 @@ def admin_list_users():
     if err:
         return err
     try:
-        r = http.get(f"{_url()}/admin/users", headers=headers, timeout=5)
+        r = http.get(f"{_url()}/admin/user", params={"op": "list"}, headers=headers, timeout=5)
         return (r.content or b"[]"), r.status_code, {"Content-Type": "application/json"}
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
@@ -188,8 +347,19 @@ def admin_get_user(name):
     if err:
         return err
     try:
-        r = http.get(f"{_url()}/admin/users/{name}", headers=headers, timeout=5)
-        return (r.content or b"{}"), r.status_code, {"Content-Type": "application/json"}
+        r = http.get(
+            f"{_url()}/admin/user",
+            params={"op": "query"},
+            headers=headers,
+            json={"query": [{"username": name}]},
+            timeout=5,
+        )
+        if not r.ok:
+            return (r.content or b"{}"), r.status_code, {"Content-Type": "application/json"}
+        resp = r.json() if r.content else {}
+        results = resp.get("results", {})
+        entry = results.get(f"user/{name}") or results.get(name) or {}
+        return jsonify({"name": name, "permissions": entry.get("permissions", [])}), 200
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
 
@@ -201,7 +371,7 @@ def admin_create_user():
         return err
     body = request.get_json(silent=True) or {}
     try:
-        r = http.post(f"{_url()}/admin/users", headers=headers, json=body, timeout=5)
+        r = http.post(f"{_url()}/admin/user", headers=headers, json=body, timeout=5)
         return _admin_response(r)
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
@@ -213,7 +383,7 @@ def admin_delete_user(name):
     if err:
         return err
     try:
-        r = http.delete(f"{_url()}/admin/users/{name}", headers=headers, timeout=5)
+        r = http.delete(f"{_url()}/admin/user/{name}", headers=headers, timeout=5)
         return _admin_response(r)
     except http.RequestException as exc:
         return jsonify({"error": str(exc)}), 502
@@ -306,46 +476,4 @@ def partial_sa_results():
 
 @bp.get("/partial/brinecrypt/resources/results")
 def partial_resources_results():
-    path = request.args.get("path", "").strip()
-    if not path:
-        return render_template(
-            "partials/brinecrypt/resources_results.html",
-            data=None,
-            error=None,
-            path=None,
-        )
-    token = session.get("bc_session_token")
-    if not token:
-        return render_template(
-            "partials/brinecrypt/resources_results.html",
-            data=None,
-            error="Not logged in. Please authenticate above.",
-            path=path,
-        )
-    try:
-        r = http.get(
-            f"{_url()}/api/v1/{path.lstrip('/')}",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=5,
-        )
-        if r.ok:
-            result = r.json() if r.content else {}
-            return render_template(
-                "partials/brinecrypt/resources_results.html",
-                data=result,
-                error=None,
-                path=path,
-            )
-        return render_template(
-            "partials/brinecrypt/resources_results.html",
-            data=None,
-            error=f"HTTP {r.status_code}: {r.text[:300]}",
-            path=path,
-        )
-    except http.RequestException as exc:
-        return render_template(
-            "partials/brinecrypt/resources_results.html",
-            data=None,
-            error=str(exc),
-            path=path,
-        )
+    return render_template("partials/brinecrypt/resources_results.html")

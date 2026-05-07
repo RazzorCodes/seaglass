@@ -1,9 +1,8 @@
 window.SeaglassTabs = (function () {
     let _pollTimer = null;
-    let _refreshTimer = null;
     let _currentUrl = null;
-    let _currentParams = {};      // sort, dir, q (from search input)
-    let _activeFilters = [];      // [{ field, op, val, label }]
+    let _currentParams = {};
+    let _activeFilters = [];
 
     const FILTER_FIELDS = {
         status:  { label: "Status",  ops: ["is", "is not"], values: ["Pending", "Done", "Error", "Running"] },
@@ -32,13 +31,6 @@ window.SeaglassTabs = (function () {
         return out;
     }
 
-    function _startRefreshTimer() {
-        if (_refreshTimer) return;
-        _refreshTimer = setInterval(async () => {
-            try { await fetch('/api/brinecrypt/refresh', { method: 'POST' }); } catch (_) {}
-        }, 10 * 60 * 1000);
-    }
-
     function _renderFilterTags() {
         const el = window.SeaglassDOM.tabToolbar.querySelector("#filter-tags");
         if (!el) return;
@@ -47,13 +39,12 @@ window.SeaglassTabs = (function () {
         ).join("");
     }
 
-    // ── Filter builder init (called after toolbar HTML is injected) ────────────
+    // ── Filter builder ─────────────────────────────────────────────────────────
 
     function _initFilterBuilder() {
-        const toolbar  = window.SeaglassDOM.tabToolbar;
+        const toolbar = window.SeaglassDOM.tabToolbar;
         if (!FILTER_FIELDS) return;
 
-        // reset AR values each activation, then re-populate from server data
         FILTER_FIELDS.ar.values = null;
         const arEl = toolbar.querySelector("#fb-ar-values");
         if (arEl) {
@@ -75,7 +66,6 @@ window.SeaglassTabs = (function () {
         const filterTags = toolbar.querySelector("#filter-tags");
         if (!fbField || !filterTags) return;
 
-        // populate field dropdown from config; skip AR if no data available
         Object.entries(FILTER_FIELDS).forEach(([key, cfg]) => {
             if (key === "ar" && !cfg.values) return;
             const opt = document.createElement("option");
@@ -84,7 +74,6 @@ window.SeaglassTabs = (function () {
             fbField.appendChild(opt);
         });
 
-        // field selection → update operator + value controls
         fbField.addEventListener("change", () => {
             const key = fbField.value;
             if (!key) { fbControls.hidden = true; return; }
@@ -109,12 +98,10 @@ window.SeaglassTabs = (function () {
             fbControls.hidden = false;
         });
 
-        // Enter key on value input submits
         fbValIn.addEventListener("keydown", (e) => {
             if (e.key === "Enter") fbAdd.click();
         });
 
-        // Add Filter button
         fbAdd.addEventListener("click", () => {
             const key = fbField.value;
             if (!key) return;
@@ -138,7 +125,6 @@ window.SeaglassTabs = (function () {
             fbControls.hidden = true;
         });
 
-        // Tag × removal (delegated on stable container)
         filterTags.addEventListener("click", (e) => {
             const btn = e.target.closest("[data-fi]");
             if (!btn) return;
@@ -149,132 +135,29 @@ window.SeaglassTabs = (function () {
         });
     }
 
-    // ── Logout ─────────────────────────────────────────────────────────────────
+    // ── Brinecrypt tab activation ──────────────────────────────────────────────
 
-    function _wireLogout(widget) {
-        const btn = widget.querySelector('#bc-logout-btn');
-        if (!btn) return;
-        btn.addEventListener('click', async () => {
-            await fetch('/api/brinecrypt/logout', { method: 'POST' }).catch(() => {});
-            window.SeaglassBrinecrypt?.reset();
-            window.SeaglassUsers?.reset();
-            window.SeaglassSA?.reset();
-            resetLoginWidget();
-        });
-    }
-
-    // ── Login widget injection ─────────────────────────────────────────────────
-
-    function _injectLoginWidget() {
-        const toolbar = window.SeaglassDOM.tabToolbar;
-        const state = window.SeaglassState;
-
-        // Only show for brinecrypt service
-        if (!state.activeApp || state.activeApp.id !== 'brinecrypt') return;
-
-        // Don't inject if already present
-        if (toolbar.querySelector('#brinecrypt-login-widget')) return;
-
-        const widget = document.createElement('div');
-        widget.id = 'brinecrypt-login-widget';
-        widget.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1e293b;border-radius:6px;margin-bottom:8px;';
-        widget.innerHTML = `
-            <input type="text" id="bc-user" placeholder="Username" style="padding:4px 8px;border:1px solid #334155;border-radius:4px;background:#0f172a;color:#e2e8f0;font-size:13px;width:140px;">
-            <input type="password" id="bc-pass" placeholder="Password" style="padding:4px 8px;border:1px solid #334155;border-radius:4px;background:#0f172a;color:#e2e8f0;font-size:13px;width:140px;">
-            <button id="bc-login-btn" style="padding:4px 12px;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">Login</button>
-            <span id="bc-login-status" style="font-size:12px;color:#94a3b8;"></span>
-        `;
-
-        // Insert at the top of toolbar — works even if toolbar is empty
-        toolbar.insertBefore(widget, toolbar.firstChild);
-
-        // Fast path: in-memory (tab switches within the same page load)
-        if (window.SeaglassBrinecrypt?.hasSession()) {
-            const user = window.SeaglassBrinecrypt.getUser();
-            widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
-            _wireLogout(widget);
-            window.SeaglassBrinecrypt?.onLogin();
-            window.SeaglassUsers?.onLogin();
-            window.SeaglassSA?.onLogin();
-            // Background verify — detects server restarts that invalidate the Flask session
-            fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
-                if (!data.logged_in) {
-                    window.SeaglassBrinecrypt?.reset();
-                    window.SeaglassUsers?.reset();
-                    window.SeaglassSA?.reset();
-                    resetLoginWidget();
-                }
-            }).catch(() => {});
-        } else {
-            // Slow path: check Flask session (handles page reload with existing session)
-            fetch('/api/brinecrypt/session').then(r => r.json()).then(data => {
-                if (data.logged_in) {
-                    window.SeaglassBrinecrypt?.setSession(data.user);
-                    widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${data.user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
-                    _wireLogout(widget);
-                    _startRefreshTimer();
-                    window.SeaglassBrinecrypt?.onLogin();
-                    window.SeaglassUsers?.onLogin();
-                    window.SeaglassSA?.onLogin();
-                }
-            }).catch(() => {});
-        }
-
-        // Wire up login button
-        const btn = widget.querySelector('#bc-login-btn');
-        const userInput = widget.querySelector('#bc-user');
-        const passInput = widget.querySelector('#bc-pass');
-        const statusEl = widget.querySelector('#bc-login-status');
-
-        async function attemptLogin() {
-            const user = userInput.value.trim();
-            const pass = passInput.value.trim();
-            if (!user || !pass) {
-                statusEl.textContent = 'User and pass required';
-                statusEl.style.color = '#ef4444';
-                return;
-            }
-            btn.disabled = true;
-            statusEl.textContent = 'Logging in...';
-            statusEl.style.color = '#94a3b8';
-
-            const result = await window.SeaglassAPI.login(state.activeApp.id, user, pass);
-
-            if (result.success) {
-                window.SeaglassBrinecrypt?.setSession(result.user);
-                widget.innerHTML = `<span style="color:#22c55e;font-size:13px;">Logged in as <strong>${result.user}</strong></span><button id="bc-logout-btn" style="margin-left:10px;padding:3px 10px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.28);border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>`;
-                _wireLogout(widget);
-                _startRefreshTimer();
-                window.SeaglassBrinecrypt?.onLogin();
-                window.SeaglassUsers?.onLogin();
-                window.SeaglassSA?.onLogin();
-            } else {
-                statusEl.textContent = result.error;
-                statusEl.style.color = '#ef4444';
-                btn.disabled = false;
-            }
-        }
-
-        btn.addEventListener('click', attemptLogin);
-        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') attemptLogin(); });
-        passInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') attemptLogin(); });
+    function _onBrinecryptTabActivate(tabId) {
+        window.SeaglassSessions?.renderIntoToolbar();
+        // Give the results HTML a moment to be injected before calling onLogin
+        setTimeout(() => {
+            if (tabId === 'resources') window.SeaglassBrinecrypt?.onLogin();
+            else if (tabId === 'users') window.SeaglassUsers?.onLogin();
+            else if (tabId === 'sa')    window.SeaglassSA?.onLogin();
+        }, 60);
     }
 
     // ── Fetch & inject ─────────────────────────────────────────────────────────
 
-    async function _loadToolbar(url) {
+    async function _loadToolbar(url, appId, tabId) {
         try {
             const r = await fetch(url);
             if (r.ok) {
                 window.SeaglassDOM.tabToolbar.innerHTML = await r.text();
                 _initFilterBuilder();
             }
-            // Always inject login widget for brinecrypt, even if toolbar fetch failed
-            _injectLoginWidget();
-        } catch (_) {
-            // Even on network error, try to show login widget
-            _injectLoginWidget();
-        }
+        } catch (_) {}
+        if (appId === 'brinecrypt') _onBrinecryptTabActivate(tabId);
     }
 
     function _setSpinner(active) {
@@ -291,14 +174,13 @@ window.SeaglassTabs = (function () {
             if (Array.isArray(v)) v.forEach((val) => params.append(k, v));
             else params.append(k, v);
         }
-        const qs = params.toString();
+        const qs  = params.toString();
         const url = qs ? `${_currentUrl}?${qs}` : _currentUrl;
         _setSpinner(true);
         try {
             const r = await fetch(url);
             if (!r.ok) {
-                // Show a friendly message instead of blank results
-                window.SeaglassDOM.tabResults.innerHTML = `<div style="padding:2rem;text-align:center;color:#94a3b8;">Service returned status ${r.status}. Try logging in above.</div>`;
+                window.SeaglassDOM.tabResults.innerHTML = `<div style="padding:2rem;text-align:center;color:#94a3b8;">Service returned status ${r.status}.</div>`;
                 return;
             }
             window.SeaglassDOM.tabResults.innerHTML = await r.text();
@@ -451,7 +333,6 @@ window.SeaglassTabs = (function () {
         });
 
         pane.addEventListener("click", (e) => {
-            // sort header
             const th = e.target.closest("th[data-sort]");
             if (th && _currentUrl) {
                 const col = th.dataset.sort;
@@ -482,7 +363,6 @@ window.SeaglassTabs = (function () {
                 return;
             }
 
-            // action button
             const btn = e.target.closest("[data-action]");
             if (btn && !btn.disabled) {
                 e.stopPropagation();
@@ -500,16 +380,14 @@ window.SeaglassTabs = (function () {
         window.SeaglassDOM.tabToolbar.innerHTML = "";
         window.SeaglassDOM.tabResults.innerHTML = "";
 
-        // Allow degraded services to show tabs (for login widget)
         if (app.status !== "online" && app.status !== "degraded") {
             window.SeaglassContent.showState();
             return;
         }
 
-        // Always show pane for online/degraded so login widget is visible
         window.SeaglassContent.showPane();
 
-        if (tab.toolbarUrl) _loadToolbar(tab.toolbarUrl);
+        if (tab.toolbarUrl) _loadToolbar(tab.toolbarUrl, app.id, tab.id);
         if (tab.url) {
             _currentUrl = tab.url;
             _loadResults();
@@ -554,20 +432,12 @@ window.SeaglassTabs = (function () {
             tabbar.insertBefore(btn, tabsRight);
         });
 
-        tabsRight.textContent = `${app.label}: ${app.version || ""}`;
+        const lbl = document.getElementById('tabs-service-label');
+        if (lbl) lbl.textContent = `${app.label}: ${app.version || ""}`;
+
     }
 
     _initDelegation();
 
-    function resetLoginWidget() {
-        const existing = window.SeaglassDOM.tabToolbar.querySelector('#brinecrypt-login-widget');
-        if (existing) existing.remove();
-        _injectLoginWidget();
-    }
-
-    return {
-        renderTabs,
-        _injectLoginWidget,
-        resetLoginWidget,
-    };
+    return { renderTabs };
 })();

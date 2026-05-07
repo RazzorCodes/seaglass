@@ -295,5 +295,7 @@ window.SeaglassSA = (function () {
     if (lp) { lp.hidden = false; }
   }
 
-  return { onLogin, handleAction, reset };
+  function onActiveSessionChanged() { onLogin(); }
+
+  return { onLogin, onActiveSessionChanged, handleAction, reset };
 })();

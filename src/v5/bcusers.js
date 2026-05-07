@@ -371,7 +371,8 @@ window.SeaglassUsers = (function () {
 
   async function onLogin() {
     _loggedIn = true;
-    _ownUser = window.SeaglassBrinecrypt?.getUser() || null;
+    const activeUser = window.SeaglassSessions?.getActiveUser();
+    _ownUser = (activeUser && activeUser !== 'anon') ? activeUser : null;
 
     if (!_tree()) {
       setTimeout(onLogin, 80);
@@ -412,7 +413,7 @@ window.SeaglassUsers = (function () {
           const det = _detail();
           if (det) det.innerHTML = '<div class="bc-loading" style="padding:1.5rem;">Loading…</div>';
           try {
-            const user = await _adminGet(`users/${_ownUser}`);
+            const user = await _adminGet('user');
             _currentPerms = user.permissions || [];
             if (det) det.innerHTML = _renderDetail(user);
           } catch (e) {
@@ -579,5 +580,7 @@ window.SeaglassUsers = (function () {
     if (det2) det2.style.flex = "";
   }
 
-  return { onLogin, handleAction, reset };
+  function onActiveSessionChanged() { onLogin(); }
+
+  return { onLogin, onActiveSessionChanged, handleAction, reset };
 })();

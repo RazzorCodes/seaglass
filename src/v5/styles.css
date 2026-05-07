@@ -339,11 +339,166 @@ body {
 
 .tabs-right {
     margin-left: auto;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding-bottom: 10px;
     position: relative;
     z-index: 1;
+}
+
+#tabs-service-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* ── Session panel ──────────────────────────────────────────────────────── */
+
+#session-panel {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.session-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: border-color 0.15s, color 0.15s;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.session-item.active {
+    height: 34px;
+    border-color: rgba(59, 130, 246, 0.6);
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.session-item.session-anon {
+    font-style: italic;
+}
+
+.session-lbl {
+    line-height: 1;
+}
+
+.session-x {
+    background: none;
+    border: none;
+    color: #475569;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    transition: color 0.12s;
+}
+
+.session-x:hover {
+    color: #ef4444;
+}
+
+.session-login-btn {
+    appearance: none;
+    background: none;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    height: 30px;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    box-sizing: border-box;
+}
+
+.session-login-btn:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #93c5fd;
+}
+
+#session-login-popover {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 220px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+#session-login-popover input {
+    background: var(--bg-base);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    padding: 5px 9px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+#session-login-popover input:focus {
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+#slp-err {
+    font-size: 0.75rem;
+    color: #ef4444;
+    min-height: 1rem;
+}
+
+.slp-row {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.slp-row button {
+    appearance: none;
+    border-radius: 5px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    transition: background 0.15s, color 0.15s;
+}
+
+.slp-row button#slp-submit {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.slp-row button#slp-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.slp-row button#slp-cancel:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
 }
 
 .content-area {
