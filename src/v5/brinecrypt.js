@@ -79,13 +79,19 @@ window.SeaglassBrinecrypt = (function () {
     return _post("resource", { namespace: ns, name }, { op: "versions" });
   }
 
+  async function _createNamespace(name) {
+    return _post('namespace', { namespace: name }, { op: 'create' });
+  }
+
   async function _writeResource(ns, name, type, value) {
     const r = await fetch("/api/brinecrypt/v1/resource", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ namespace: ns, name, type, value }),
     });
-    const data = await r.json();
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch (_) { data = { error: text.trim() || `HTTP ${r.status}` }; }
     if (!r.ok) {
       _logWarn("resource/put", data);
       throw new Error(data.error || `HTTP ${r.status}`);
@@ -461,6 +467,27 @@ window.SeaglassBrinecrypt = (function () {
 </div>`;
   }
 
+  // ── Create namespace form ──────────────────────────────────────────────────
+
+  function _renderCreateNsForm(errMsg = '') {
+    const errHtml = errMsg ? `<div id="bc-ns-err" style="color:#ef4444;font-size:0.8rem;min-height:1rem;">${esc(errMsg)}</div>` : `<div id="bc-ns-err" style="min-height:1rem;"></div>`;
+    return `
+<div class="bc-add-form" id="bc-ns-form">
+  <div class="bc-add-form-hdr"><span>New Namespace</span></div>
+  <div class="bc-add-form-body">
+    <div class="bc-add-field">
+      <span class="bc-add-label">Name</span>
+      <input type="text" id="bc-ns-name" placeholder="namespace-name" class="pane-search" style="flex:none;width:100%;font-size:0.84rem;">
+    </div>
+    ${errHtml}
+  </div>
+  <div style="display:flex;gap:0.5rem;padding:0.6rem 0.75rem;border-top:1px solid var(--border);">
+    <button class="btn btn-ghost btn-sm" data-action="bc-add-ns-cancel">Cancel</button>
+    <button class="btn btn-primary btn-sm" data-action="bc-add-ns-confirm" style="margin-left:auto;">Create →</button>
+  </div>
+</div>`;
+  }
+
   // ── Add resource form ──────────────────────────────────────────────────────
 
   function _renderAddForm(ns, editable = false) {
@@ -795,15 +822,35 @@ window.SeaglassBrinecrypt = (function () {
       }
 
       case "bc-add-new": {
-        _draftResource = {
-          ns: "",
-          name: "",
-          type: "cleartext",
-          value: "",
-          editable: true,
-        };
         const detail = _detail();
-        if (detail) detail.innerHTML = _renderAddForm("", true);
+        if (detail) detail.innerHTML = _renderCreateNsForm();
+        setTimeout(() => document.getElementById("bc-ns-name")?.focus(), 0);
+        return true;
+      }
+      case "bc-add-ns-cancel": {
+        const detail = _detail();
+        if (detail) detail.innerHTML = '<div class="pane-empty"><p>Select a resource</p></div>';
+        return true;
+      }
+      case "bc-add-ns-confirm": {
+        const nameEl = document.getElementById("bc-ns-name");
+        const name = nameEl?.value.trim();
+        const errEl = document.getElementById("bc-ns-err");
+        if (!name) { if (errEl) errEl.textContent = "Name is required"; return true; }
+        const confirmBtn = document.querySelector('[data-action="bc-add-ns-confirm"]');
+        if (confirmBtn) confirmBtn.disabled = true;
+        _createNamespace(name).then(() => {
+          const detail = _detail();
+          if (detail) detail.innerHTML = `
+<div class="bc-card">
+  <div class="bc-card-hdr"><span class="bc-rname">${esc(name)}</span></div>
+  <div class="bc-mgrid"><span class="bc-mk">status</span><span class="bc-mv" style="color:#22c55e;">created</span></div>
+</div>`;
+          loadNamespaces();
+        }).catch(err => {
+          const form = document.getElementById("bc-ns-form");
+          if (form) form.outerHTML = _renderCreateNsForm(err.message);
+        });
         return true;
       }
     }

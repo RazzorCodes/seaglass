@@ -49,6 +49,8 @@ spec:
               value: {{ required "brinecrypt.url is required" .Values.brinecrypt.url | quote }}
             - name: BRINECRYPT_PUBLIC_URL
               value: {{ .Values.brinecrypt.publicUrl | default .Values.brinecrypt.url | quote }}
+            - name: CORALFORGE_URL
+              value: {{ required "coralforge.url is required" .Values.coralforge.url | quote }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

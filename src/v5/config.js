@@ -25,6 +25,17 @@ window.APP_CONFIG = [
         icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
     },
     {
+        id: "coralforge",
+        label: "Coralforge",
+        status: "online",
+        color: "#ef4444",
+        version: "v0.1.0",
+        tabs: [
+            { id: "runs", label: "Runs", toolbarUrl: "/partial/coralforge/runs/toolbar", url: "/partial/coralforge/runs/results" }
+        ],
+        icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>`
+    },
+    {
         id: "oakleaf",
         label: "Oakleaf",
         status: "offline",

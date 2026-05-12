@@ -5,15 +5,18 @@ from flask import Flask, jsonify, send_from_directory
 
 from services.transflux import bp as transflux_bp
 from services.brinecrypt import bp as brinecrypt_bp
+from services.coralforge import bp as coralforge_bp
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.config["TRANSFLUX_URL"] = os.environ.get("TRANSFLUX_URL", "http://localhost:8000").rstrip("/")
 app.config["BRINECRYPT_URL"] = os.environ.get("BRINECRYPT_URL", "http://brinecrypt.lan").rstrip("/")
 app.config["BRINECRYPT_PUBLIC_URL"] = os.environ.get("BRINECRYPT_PUBLIC_URL", app.config["BRINECRYPT_URL"]).rstrip("/")
+app.config["CORALFORGE_URL"] = os.environ.get("CORALFORGE_URL", "http://coralforge.lan").rstrip("/")
 
 app.register_blueprint(transflux_bp)
 app.register_blueprint(brinecrypt_bp)
+app.register_blueprint(coralforge_bp)
 
 _SRC = os.path.dirname(__file__)
 

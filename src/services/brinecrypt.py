@@ -234,13 +234,14 @@ def api_v1_namespace_list():
 
 
 @bp.post("/api/brinecrypt/v1/namespace")
-def api_v1_namespace_query():
-    """Proxy → POST /api/v1/namespace?op=query"""
+def api_v1_namespace_op():
+    """Proxy → POST /api/v1/namespace?op=<query|create>"""
+    op = request.args.get("op", "query")
     body = request.get_json(silent=True) or {}
     try:
         r = http.post(
             f"{_url()}/api/v1/namespace",
-            params={"op": "query"},
+            params={"op": op},
             headers=_proxy_headers(),
             json=body,
             timeout=5,

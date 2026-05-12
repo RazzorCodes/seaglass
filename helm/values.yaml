@@ -20,6 +20,9 @@ containerPort: 5000
 transflux:
   url: ""
 
+coralforge:
+  url: ""
+
 brinecrypt:
   url: ""
   # publicUrl is the browser-reachable URL sent to the frontend for CORS login.

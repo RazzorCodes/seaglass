@@ -158,6 +158,7 @@ window.SeaglassTabs = (function () {
             }
         } catch (_) {}
         if (appId === 'brinecrypt') _onBrinecryptTabActivate(tabId);
+        if (appId === 'coralforge') window.SeaglassCoralforge?.onLoad();
     }
 
     function _setSpinner(active) {
@@ -244,6 +245,8 @@ window.SeaglassTabs = (function () {
             case "bc-add-resource-confirm":
             case "bc-delete-resource":
             case "bc-add-new":
+            case "bc-add-ns-cancel":
+            case "bc-add-ns-confirm":
             case "bc-query":
             case "bc-query-submit":
                 window.SeaglassBrinecrypt?.handleAction(data.action, btn);
@@ -270,6 +273,16 @@ window.SeaglassTabs = (function () {
             case "bcsa-query":
             case "bcsa-query-submit":
                 window.SeaglassSA?.handleAction(data.action, btn);
+                return;
+
+            case "cf-refresh":
+            case "cf-select-repo":
+            case "cf-select-run":
+            case "cf-select-run-type":
+            case "cf-back-to-repo":
+            case "cf-lifecycle-trigger":
+            case "cf-show-logs":
+                window.SeaglassCoralforge?.handleAction(data.action, btn);
                 return;
 
             case "batch-clear": {
@@ -305,7 +318,11 @@ window.SeaglassTabs = (function () {
 
         pane.addEventListener("keydown", (e) => {
             if (e.key !== "Enter") return;
-            if (e.target.id === "bc-query-ns" || e.target.id === "bc-query-name") {
+            if (e.target.id === "bc-ns-name") {
+                e.preventDefault();
+                const btn = pane.querySelector('[data-action="bc-add-ns-confirm"]');
+                if (btn && !btn.disabled) btn.click();
+            } else if (e.target.id === "bc-query-ns" || e.target.id === "bc-query-name") {
                 e.preventDefault();
                 const btn = pane.querySelector('[data-action="bc-query-submit"]');
                 if (btn && !btn.disabled) btn.click();
